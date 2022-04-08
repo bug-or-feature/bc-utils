@@ -36,7 +36,7 @@ flake8 = "^4.0"
 pytest = "^6.2"
 
 [tool.poetry.urls]
-"https://github.com/bug-or-feature/bc-utils/issues"
+"Issues" = "https://github.com/bug-or-feature/bc-utils/issues"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
