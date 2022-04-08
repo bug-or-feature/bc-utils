@@ -6,20 +6,25 @@ format. Individual contracts must be downloaded separately, which is laborious a
 ## Quickstart
 
 ```
-from bcutils.bc_utils import get_barchart_downloads
+from bcutils.bc_utils import get_barchart_downloads, create_bc_session
 
 CONTRACTS={
     "AUD":{"code":"A6","cycle":"HMUZ","tick_date":"2009-11-24"},
     "GOLD": {"code": "GC", "cycle": "GJMQVZ", "tick_date": "2008-05-04"}
 }
 
+session = create_bc_session(config=dict(
+    barchart_username="user@domain.com",
+    barchart_password = "s3cr3t_321")
+)
+
 get_barchart_downloads(
+    session,
     contract_map=CONTRACTS,
-    username='user@domain.com',
-    password='s3cr3t_321',
+    save_directory='/home/user/contract_data',
     start_year=2020,
-    end_year=2021,
-    save_directory='/home/contract_data')
+    end_year=2021
+)
 ```
 
 The code above would: 
