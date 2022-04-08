@@ -37,3 +37,4 @@ inc/
 /.idea
 /.env
 /.venv
+/data
