@@ -27,7 +27,7 @@ class TestDownloader:
             get_barchart_downloads(
                 create_bc_session(config=dict(
                     barchart_username="user@domain.com",
-                    barchart_password = "s3cr3t_321")
+                    barchart_password="s3cr3t_321")
                 ),
                 contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}},
                 save_directory=download_dir,

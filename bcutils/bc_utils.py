@@ -47,28 +47,31 @@ def month_from_contract_letter(contract_letter):
     return month_number + 1
 
 
-def create_bc_session(username=None, password=None):
+def create_bc_session(config: dict, do_login=True):
 
     # start a session
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
-    if username and password:
+    if do_login is True and \
+            "barchart_username" not in config or \
+            "barchart_password" not in config:
+        raise Exception('Barchart credentials are required')
+
+    if do_login:
+
         # GET the login page, scrape to get CSRF token
         resp = session.get(BARCHART_URL + 'login')
         soup = BeautifulSoup(resp.text, 'html.parser')
         tag = soup.find(type='hidden')
         csrf_token = tag.attrs['value']
-        logging.info('GET %s, status: %s, CSRF token: %s' % (BARCHART_URL + 'login', resp.status_code, csrf_token))
+        logging.info(f"GET {BARCHART_URL + 'login'}, status: {resp.status_code}, CSRF token: {csrf_token}")
 
         # login to site
-        payload = {'email': username, 'password': password, '_token': csrf_token}
+        payload = {'email': config['barchart_username'], 'password': config['barchart_password'], '_token': csrf_token}
         resp = session.post(BARCHART_URL + 'login', data=payload)
-        logging.info('POST %s, status: %s' % (BARCHART_URL + 'login', resp.status_code))
+        logging.info(f"POST {BARCHART_URL + 'login'}, status: {resp.status_code}")
         if resp.url == BARCHART_URL + 'login':
             raise Exception('Invalid Barchart credentials')
-
-    else:
-        raise Exception('Barchart credentials are required')
 
     return session
 
@@ -98,8 +101,8 @@ def save_prices_for_contract(
         instrument = inv_map[market_code.upper()]
         datecode = str(year)+'{0:02d}'.format(month)
 
-        filename = '%s_%s00.csv' % (instrument, datecode)
-        full_path = '%s/%s' % (path, filename)
+        filename = f"{instrument}_{datecode}00.csv"
+        full_path = f"{path}/{filename}"
 
         # do we have this file already?
         if os.path.isfile(full_path):
@@ -107,7 +110,7 @@ def save_prices_for_contract(
                 logging.info("Placeholder found indicating missing hourly data, switching to daily")
                 period = 'daily'
             else:
-                logging.info("Data for contract '%s' already downloaded, skipping\n" % contract)
+                logging.info(f"Data for contract '{contract}' already downloaded, skipping\n")
                 return HistoricalDataResult.EXISTS
 
         # we need to work out a date range for which we want the prices
@@ -136,20 +139,21 @@ def save_prices_for_contract(
     # catch/rethrow KeyError FX
 
     except Exception as e:
-        logging.error('Problem: %s, %s' % (e, traceback.format_exc()))
+        logging.error(f"Problem: {e}, {traceback.format_exc()}")
 
-    logging.info("getting historic %s prices for contract '%s', from %s to %s" %
-          (period, contract, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+    logging.info(f"getting historic {period} prices for contract '{contract}', "
+                 f"from {start_date.strftime('%Y-%m-%d')} "
+                 f"to {end_date.strftime('%Y-%m-%d')}")
 
     try:
 
         # open historic data download page for required contract
-        url = '%sfutures/quotes/%s/historical-download' % (BARCHART_URL, contract)
+        url = f"{BARCHART_URL}futures/quotes/{contract}/historical-download"
         hist_resp = session.get(url)
-        logging.info('GET %s, status %s' % (url, hist_resp.status_code))
+        logging.info(f"GET {url}, status {hist_resp.status_code}")
 
         if hist_resp.status_code != 200:
-            logging.info("No downloadable data found for contract '%s'\n" % contract)
+            logging.info(f"No downloadable data found for contract '{contract}'\n")
             return HistoricalDataResult.NONE
 
         xsrf = urllib.parse.unquote(hist_resp.cookies['XSRF-TOKEN'])
@@ -176,8 +180,10 @@ def save_prices_for_contract(
 
         if allowance['success']:
 
-            logging.info('POST %s, status: %s, allowance success: %s, allowance count: %s' %
-                (BARCHART_URL + 'my/download', resp.status_code, allowance['success'], allowance['count']))
+            logging.info(f"POST {BARCHART_URL + 'my/download'}, "
+                         f"status: {resp.status_code}, "
+                         f"allowance success: {allowance['success']}, "
+                         f"allowance count: {allowance['count']}")
 
             # download data
             xsrf = urllib.parse.unquote(resp.cookies['XSRF-TOKEN'])
@@ -213,7 +219,9 @@ def save_prices_for_contract(
 
             if not dry_run:
                 resp = session.post(BARCHART_URL + 'my/download', headers=headers, data=payload)
-                logging.info('POST %s, status: %s, data length: %s' % (BARCHART_URL + 'my/download', resp.status_code, len(resp.content)))
+                logging.info(f"POST {BARCHART_URL + 'my/download'}, "
+                             f"status: {resp.status_code}, "
+                             f"data length: {len(resp.content)}")
                 if resp.status_code == 200:
 
                     if 'Error retrieving data' not in resp.text:
@@ -238,23 +246,22 @@ def save_prices_for_contract(
                         logging.info(f"Barchart data problem for '{instrument}_{datecode}00', not writing")
 
             else:
-                logging.info('Not POSTing to %s, dry_run' % (BARCHART_URL + 'my/download'))
+                logging.info(f"Not POSTing to {BARCHART_URL + 'my/download'}, dry_run")
 
-            logging.info('Finished getting Barchart historic prices for %s\n' % contract)
+            logging.info(f"Finished getting Barchart historic prices for {contract}\n")
 
         return HistoricalDataResult.LOW if low_data else HistoricalDataResult.OK
 
     except Exception as e:
-        logging.error('Error %s' % e)
+        logging.error(f"Error {e}")
 
 
 def get_barchart_downloads(
+        session,
         contract_map=None,
-        username=None,
-        password=None,
         save_directory=None,
         start_year=1950,
-        end_year=2024,
+        end_year=2025,
         dry_run=False,
         force_daily=False):
 
@@ -271,8 +278,6 @@ def get_barchart_downloads(
             level=logging.INFO,
             format='%(asctime)s %(levelname)s %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S')
-
-        session = create_bc_session(username, password)
 
         contract_list = build_contract_list(start_year, end_year, contract_map=contract_map)
 
@@ -314,17 +319,18 @@ def get_barchart_downloads(
                 logging.info('Max daily download reached, aborting')
                 break
             else:
-                time.sleep(0 if dry_run else randint(7, 15)) # cursory attempt to not appear like a bot
+                # cursory attempt to not appear like a bot
+                time.sleep(0 if dry_run else randint(7, 15))
 
         # logout
         resp = session.get(BARCHART_URL + 'logout', timeout=10)
-        logging.info('GET %s, status: %s' % (BARCHART_URL + 'logout', resp.status_code))
+        logging.info(f"GET {BARCHART_URL + 'logout'}, status: {resp.status_code}")
 
         if low_data_contracts:
             logging.warning(f"Low/poor data found for: {low_data_contracts}, maybe check config")
 
     except Exception as e:
-        logging.error('Error: %s' % e)
+        logging.error(f"Error {e}")
 
 
 def build_contract_list(start_year, end_year, contract_map=None):
@@ -346,9 +352,11 @@ def build_contract_list(start_year, end_year, contract_map=None):
 
         for year in range(start_year, end_year):
             for month_code in list(rollcycle):
-                instrument_list.append('%s%s%s' % (futures_code, month_code, str(year)[len(str(year))-2:]))
+                instrument_list.append(f"{futures_code}{month_code}{str(year)[len(str(year))-2:]}")
         contracts_per_instrument[instr] = instrument_list
         count = count + len(instrument_list)
+
+    logging.info(f'Count: {count}')
 
     pool = cycle(contract_map.keys())
 
@@ -392,17 +400,27 @@ def check_row_date(row_date):
     return row_date.year == 1970 and row_date.month == 1 and row_date.day == 1
 
 
-
 def build_inverse_map(contract_map):
     return dict((v['code'], k) for k, v in contract_map.items())
 
 
 if __name__ == "__main__":
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
+
+    config = {
+        'barchart_username': 'BARCHART_USERNAME',
+        'barchart_password': 'BARCHART_PASSWORD'
+    }
+    bc_config = {k: os.environ.get(v) for k, v in config.items() if v in os.environ}
+
     get_barchart_downloads(
-        contract_map={"AUD":{"code":"A6","cycle":"HMUZ","tick_date":"2009-11-24"}},
-        username='user@domain.com',
-        password='s3cr3t_321',
+        create_bc_session(config=bc_config),
+        contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}},
+        save_directory="/Users/ageach/Dev/work/bc-utils/data",
         start_year=2020,
-        end_year=2021,
-        dry_run=True)
+        end_year=2022,
+        dry_run=False)
