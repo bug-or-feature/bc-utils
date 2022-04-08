@@ -3,6 +3,27 @@ name = "bc-utils"
 version = "0.1.0"
 description = "Python utility automation scripts for Barchart.com"
 authors = ["Andy Geach <andy@bugorfeature.net>"]
+license = "BSD-3-Clause"
+homepage = "https://github.com/bug-or-feature/bc-utils"
+repository = "https://github.com/bug-or-feature/bc-utils"
+keywords = ["trading"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Cython",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: BSD License",
+]
+packages = [
+    { include = "bcutils" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -13,6 +34,9 @@ flake8 = "^4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
+
+[tool.poetry.urls]
+"https://github.com/bug-or-feature/bc-utils/issues"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
