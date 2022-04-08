@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Python utility automation scripts for Barchart.com"
 authors = ["Andy Geach <andy@bugorfeature.net>"]
 license = "BSD-3-Clause"
+readme = "README.md"
 homepage = "https://github.com/bug-or-feature/bc-utils"
 repository = "https://github.com/bug-or-feature/bc-utils"
 keywords = ["trading"]
