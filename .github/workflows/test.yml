@@ -38,5 +38,8 @@ jobs:
         python -m poetry run flake8 bcutils
 
     - name: Unit tests with pytest
+      env:
+        BARCHART_USERNAME: ${{ secrets.BARCHART_USERNAME }}
+        BARCHART_PASSWORD: ${{ secrets.BARCHART_PASSWORD }}
       run: |
         python -m poetry run python -m pytest
