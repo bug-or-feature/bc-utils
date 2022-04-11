@@ -29,12 +29,12 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.8"
 requests = "^2.26"
-bs4 = "^0.0.1"
 pandas = ">1,<=1.0.5"
-flake8 = "^4.0"
+beautifulsoup4 = "^4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
+flake8 = "^4.0.1"
 
 [tool.poetry.urls]
 "Issues" = "https://github.com/bug-or-feature/bc-utils/issues"
