@@ -363,8 +363,8 @@ def build_contract_list(start_year, end_year, contract_map=None):
         if instr not in contracts_per_instrument:
             continue
         instr_list = contracts_per_instrument[instr]
-        config = contract_map[instr]
-        rollcycle = config['cycle']
+        config_obj = contract_map[instr]
+        rollcycle = config_obj['cycle']
         if len(rollcycle) > 10:
             max_count = 3
         elif len(rollcycle) > 7:
@@ -372,7 +372,7 @@ def build_contract_list(start_year, end_year, contract_map=None):
         else:
             max_count = 1
 
-        for x in range(0, max_count):
+        for _ in range(0, max_count):
             if len(instr_list) > 0:
                 contract_list.append(instr_list.pop())
 
