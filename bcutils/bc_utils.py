@@ -66,7 +66,11 @@ def create_bc_session(config_obj: dict, do_login=True):
         logging.info(f"GET {BARCHART_URL + 'login'}, status: {resp.status_code}, CSRF token: {csrf_token}")
 
         # login to site
-        payload = {'email': config_obj['barchart_username'], 'password': config_obj['barchart_password'], '_token': csrf_token}
+        payload = {
+            'email': config_obj['barchart_username'],
+            'password': config_obj['barchart_password'],
+            '_token': csrf_token
+        }
         resp = session.post(BARCHART_URL + 'login', data=payload)
         logging.info(f"POST {BARCHART_URL + 'login'}, status: {resp.status_code}")
         if resp.url == BARCHART_URL + 'login':
