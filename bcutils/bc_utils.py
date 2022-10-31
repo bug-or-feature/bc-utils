@@ -38,7 +38,6 @@ def month_from_contract_letter(contract_letter):
     :param contract_letter:
     :return:
     """
-
     try:
         month_number = MONTH_LIST.index(contract_letter)
     except ValueError:
