@@ -46,14 +46,14 @@ def month_from_contract_letter(contract_letter):
     return month_number + 1
 
 
-def create_bc_session(config: dict, do_login=True):
+def create_bc_session(config_obj: dict, do_login=True):
 
     # start a session
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
     if do_login is True and \
-            "barchart_username" not in config or \
-            "barchart_password" not in config:
+            "barchart_username" not in config_obj or \
+            "barchart_password" not in config_obj:
         raise Exception('Barchart credentials are required')
 
     if do_login:
@@ -66,7 +66,7 @@ def create_bc_session(config: dict, do_login=True):
         logging.info(f"GET {BARCHART_URL + 'login'}, status: {resp.status_code}, CSRF token: {csrf_token}")
 
         # login to site
-        payload = {'email': config['barchart_username'], 'password': config['barchart_password'], '_token': csrf_token}
+        payload = {'email': config_obj['barchart_username'], 'password': config_obj['barchart_password'], '_token': csrf_token}
         resp = session.post(BARCHART_URL + 'login', data=payload)
         logging.info(f"POST {BARCHART_URL + 'login'}, status: {resp.status_code}")
         if resp.url == BARCHART_URL + 'login':
