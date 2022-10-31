@@ -310,12 +310,12 @@ def get_barchart_downloads(
                                               tick_date=tick_date, days=days_count, dry_run=dry_run)
             if result == HistoricalDataResult.EXISTS:
                 continue
-            elif result == HistoricalDataResult.NONE:
+            if result == HistoricalDataResult.NONE:
                 continue
-            elif result == HistoricalDataResult.LOW:
+            if result == HistoricalDataResult.LOW:
                 low_data_contracts.append(contract)
                 continue
-            elif result == HistoricalDataResult.EXCEED:
+            if result == HistoricalDataResult.EXCEED:
                 logging.info('Max daily download reached, aborting')
                 break
             else:
