@@ -132,12 +132,11 @@ def save_prices_for_contract(
 
         # hourly data only goes back to a certain date, depending on the exchange
         # if our dates are before that date, switch to daily prices
-        if tick_date is not None:
-            if start_date < tick_date:
-                logging.info(f"Switching to daily prices for '{contract}', "
-                             f"{start_date.strftime('%Y-%m-%d')} is before "
-                             f"{tick_date.strftime('%Y-%m-%d')}")
-                period = 'daily'
+        if tick_date is not None and start_date < tick_date:
+            logging.info(f"Switching to daily prices for '{contract}', "
+                         f"{start_date.strftime('%Y-%m-%d')} is before "
+                         f"{tick_date.strftime('%Y-%m-%d')}")
+            period = 'daily'
 
     # catch/rethrow KeyError FX
 
@@ -363,7 +362,10 @@ def build_contract_list(start_year, end_year, contract_map=None):
     pool = cycle(contract_map.keys())
 
     while len(contract_list) < count:
-        instr = next(pool)
+        try:
+            instr = next(pool)
+        except StopIteration:
+            continue
         if instr not in contracts_per_instrument:
             continue
         instr_list = contracts_per_instrument[instr]
@@ -420,7 +422,7 @@ if __name__ == "__main__":
     bc_config = {k: os.environ.get(v) for k, v in config.items() if v in os.environ}
 
     get_barchart_downloads(
-        create_bc_session(config=bc_config),
+        create_bc_session(config_obj=bc_config),
         contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}},
         save_directory="/Users/ageach/Dev/work/bc-utils/data",
         start_year=2020,
