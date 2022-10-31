@@ -137,7 +137,7 @@ def save_prices_for_contract(
 
     # catch/rethrow KeyError FX
 
-    except Exception as e:
+    except Exception as e:  # skipcq broad by design
         logging.error(f"Problem: {e}, {traceback.format_exc()}")
 
     logging.info(f"getting historic {period} prices for contract '{contract}', "
@@ -251,7 +251,7 @@ def save_prices_for_contract(
 
         return HistoricalDataResult.LOW if low_data else HistoricalDataResult.OK
 
-    except Exception as e:
+    except Exception as e:  # skipcq broad by design
         logging.error(f"Error {e}")
 
 
@@ -328,7 +328,7 @@ def get_barchart_downloads(
         if low_data_contracts:
             logging.warning(f"Low/poor data found for: {low_data_contracts}, maybe check config")
 
-    except Exception as e:
+    except Exception as e:  # skipcq broad by design
         logging.error(f"Error {e}")
 
 
@@ -342,11 +342,11 @@ def build_contract_list(start_year, end_year, contract_map=None):
         contract_map = CONTRACT_MAP
 
     for instr in contract_map.keys():
-        config = contract_map[instr]
-        futures_code = config['code']
+        config_obj = contract_map[instr]
+        futures_code = config_obj['code']
         if futures_code == 'none':
             continue
-        rollcycle = config['cycle']
+        rollcycle = config_obj['cycle']
         instrument_list = []
 
         for year in range(start_year, end_year):
