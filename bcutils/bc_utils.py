@@ -362,7 +362,7 @@ def build_contract_list(start_year, end_year, contract_map=None):
 
     while len(contract_list) < count:
         instr = next(pool)
-        if instr not in contracts_per_instrument.keys():
+        if instr not in contracts_per_instrument:
             continue
         instr_list = contracts_per_instrument[instr]
         config = contract_map[instr]
