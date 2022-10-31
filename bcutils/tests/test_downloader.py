@@ -15,7 +15,7 @@ class TestDownloader:
     def test_no_credentials(self, download_dir):
         with pytest.raises(Exception):
             get_barchart_downloads(
-                create_bc_session(config=dict()),
+                create_bc_session(config={}),
                 contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}},
                 save_directory=download_dir,
                 start_year=2020,

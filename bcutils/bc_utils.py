@@ -335,7 +335,7 @@ def get_barchart_downloads(
 
 def build_contract_list(start_year, end_year, contract_map=None):
 
-    contracts_per_instrument = dict()
+    contracts_per_instrument = {}
     contract_list = []
     count = 0
 
