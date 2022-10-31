@@ -317,9 +317,8 @@ def get_barchart_downloads(
             if result == HistoricalDataResult.EXCEED:
                 logging.info('Max daily download reached, aborting')
                 break
-            else:
-                # cursory attempt to not appear like a bot
-                time.sleep(0 if dry_run else randint(7, 15))
+            # cursory attempt to not appear like a bot
+            time.sleep(0 if dry_run else randint(7, 15))
 
         # logout
         resp = session.get(BARCHART_URL + 'logout', timeout=10)
