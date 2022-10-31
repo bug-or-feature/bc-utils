@@ -401,7 +401,7 @@ def check_row_date(row_date):
 
 
 def build_inverse_map(contract_map):
-    return dict((v['code'], k) for k, v in contract_map.items())
+    return {v['code']: k for k, v in contract_map.items()}
 
 
 if __name__ == "__main__":
