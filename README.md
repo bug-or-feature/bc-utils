@@ -13,7 +13,7 @@ CONTRACTS={
     "GOLD": {"code": "GC", "cycle": "GJMQVZ", "tick_date": "2008-05-04"}
 }
 
-session = create_bc_session(config=dict(
+session = create_bc_session(config_obj=dict(
     barchart_username="user@domain.com",
     barchart_password = "s3cr3t_321")
 )
