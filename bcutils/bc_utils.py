@@ -424,7 +424,7 @@ if __name__ == "__main__":
     get_barchart_downloads(
         create_bc_session(config_obj=bc_config),
         contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}},
-        save_directory="/Users/ageach/Dev/work/bc-utils/data",
+        save_directory="/home/user/barchart_data",
         start_year=2020,
         end_year=2022,
         dry_run=False)
