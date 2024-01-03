@@ -1,5 +1,3 @@
-
-
 CONTRACT_MAP = {
     "AEX": {"code": "AE", "cycle": "FGHJKMNQUVXZ", "tick_date": "2008-05-05"},
     "ASX": {"code": "AP", "cycle": "HMUZ", "tick_date": "2019-11-03"},
@@ -14,6 +12,7 @@ CONTRACT_MAP = {
     "CAD": {"code": "D6", "cycle": "HMUZ", "tick_date": "2008-05-05"},
     "CANOLA": {"code": "RS", "cycle": "FHKNX", "tick_date": "2008-05-05"},
     "CHF": {"code": "S6", "cycle": "HMUZ", "tick_date": "2008-05-05"},
+    "CHFJPY": {"code": "UP", "cycle": "HMUZ", "tick_date": "2009-05-01"},
     "COCOA_LDN": {"code": "CA", "cycle": "HKNUZ", "tick_date": "2009-07-01"},
     "COCOA_NY": {"code": "CC", "cycle": "HKNUZ", "tick_date": "2008-05-04"},
     "COFFEE": {"code": "KC", "cycle": "HKNUZ", "tick_date": "2008-05-04"},
@@ -24,8 +23,18 @@ CONTRACT_MAP = {
     "DAX": {"code": "DY", "cycle": "HMUZ", "tick_date": "1999-06-23"},
     "DOW": {"code": "YM", "cycle": "HMUZ", "tick_date": "2008-05-04"},
     "DX": {"code": "DX", "cycle": "HMUZ", "tick_date": "2008-05-04"},
-    "EDOLLAR": {"code": "GE", "cycle": "HMUZ", "tick_date": "2008-05-05", "days_count": 1000},
-    "EUA": {"code": "CK", "cycle": "FGHJKMNQUVXZ", "tick_date": "2025-01-01", "days_count": 800},
+    "EDOLLAR": {
+        "code": "GE",
+        "cycle": "HMUZ",
+        "tick_date": "2008-05-05",
+        "days_count": 1000,
+    },
+    "EUA": {
+        "code": "CK",
+        "cycle": "FGHJKMNQUVXZ",
+        "tick_date": "2025-01-01",
+        "days_count": 800,
+    },
     "EUR": {"code": "E6", "cycle": "HMUZ", "tick_date": "2008-05-05"},
     "EURGBP": {"code": "RP", "cycle": "HMUZ", "tick_date": "2008-05-05"},
     "EURIBOR": {"code": "IM", "cycle": "HMUZ", "tick_date": "2011-03-31"},
@@ -70,8 +79,18 @@ CONTRACT_MAP = {
     "SOYMEAL": {"code": "ZM", "cycle": "FHKNQUVZ", "tick_date": "2008-05-04"},
     "SOYOIL": {"code": "ZL", "cycle": "FHKNQUVZ", "tick_date": "2008-05-04"},
     "SP500": {"code": "ES", "cycle": "HMUZ", "tick_date": "2008-05-05"},
-    "SUGAR": {"code": "SW", "cycle": "HKQVZ", "tick_date": "2009-08-01", "days_count": 300},
-    "SUGAR11": {"code": "SB", "cycle": "HKNV", "tick_date": "2008-05-04", "days_count": 200},
+    "SUGAR": {
+        "code": "SW",
+        "cycle": "HKQVZ",
+        "tick_date": "2009-08-01",
+        "days_count": 300,
+    },
+    "SUGAR11": {
+        "code": "SB",
+        "cycle": "HKNV",
+        "tick_date": "2008-05-04",
+        "days_count": 200,
+    },
     "SWE30": {"code": "OX", "cycle": "FGHJKMNQUVXZ", "tick_date": "2025-01-01"},
     "US10": {"code": "ZN", "cycle": "HMUZ", "tick_date": "2008-05-04"},
     "US10U": {"code": "TN", "cycle": "HMUZ", "tick_date": "2008-05-04"},
@@ -81,5 +100,10 @@ CONTRACT_MAP = {
     "V2X": {"code": "DV", "cycle": "FGHJKMNQUVXZ", "tick_date": "1999-06-23"},
     "VIX": {"code": "VI", "cycle": "FGHJKMNQUVXZ", "tick_date": "2009-11-24"},
     "WHEAT": {"code": "ZW", "cycle": "HKNUZ", "tick_date": "2008-05-04"},
-    "WHEAT_ICE": {"code": "LW", "cycle": "FHKNUX", "tick_date": "2021-05-01", "days_count": 400},
+    "WHEAT_ICE": {
+        "code": "LW",
+        "cycle": "FHKNUX",
+        "tick_date": "2021-05-01",
+        "days_count": 400,
+    },
 }
