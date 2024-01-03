@@ -215,8 +215,7 @@ def save_prices_for_contract(
                 logger.info(f"Not POSTing to {BARCHART_URL + 'my/download'}, dry_run")
 
             logger.info(
-                f"Finished getting Barchart historic prices for {contract} "
-                f"({save_path})"
+                f"Finished getting Barchart historic {period} prices for {contract}\n"
             )
 
         return HistoricalDataResult.OK
@@ -236,11 +235,6 @@ def get_barchart_downloads(
     dry_run=False,
     do_daily=True,
 ):
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
     if contract_map is None:
         contract_map = CONTRACT_MAP
@@ -319,10 +313,6 @@ def get_barchart_downloads(
 #         do_daily=True,
 #         dry_run=False,
 # ):
-#     logging.basicConfig(
-#         level=logging.INFO,
-#         format='%(asctime)s %(levelname)s %(message)s',
-#         datefmt='%Y-%m-%d %H:%M:%S')
 #
 #     session = requests.Session()
 #     session.headers.update({'User-Agent': 'Mozilla/5.0'})
@@ -730,11 +720,6 @@ def _env():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
