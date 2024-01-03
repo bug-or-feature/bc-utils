@@ -90,8 +90,8 @@ def save_prices_for_contract(
         # do we have this file already?
         if os.path.isfile(save_path):
             logger.info(
-                f"{period} data for contract '{contract}' already downloaded, "
-                f"skipping\n"
+                f"{period} data for contract '{contract}' already downloaded "
+                f"({save_path}) - skipping\n"
             )
             return HistoricalDataResult.EXISTS
 
@@ -209,12 +209,15 @@ def save_prices_for_contract(
 
                     else:
                         logger.info(
-                            f"Barchart data problem for '{contract}', " f"not writing"
+                            f"Barchart data problem for '{contract}', not writing"
                         )
             else:
                 logger.info(f"Not POSTing to {BARCHART_URL + 'my/download'}, dry_run")
 
-            logger.info(f"Finished getting Barchart historic prices for {contract}\n")
+            logger.info(
+                f"Finished getting Barchart historic prices for {contract} "
+                f"({save_path})"
+            )
 
         return HistoricalDataResult.OK
 
@@ -233,7 +236,6 @@ def get_barchart_downloads(
     dry_run=False,
     do_daily=True,
 ):
-
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -246,7 +248,6 @@ def get_barchart_downloads(
     inv_contract_map = _build_inverse_map(contract_map)
 
     try:
-
         if contract_list is None:
             contract_list = _build_contract_list(
                 start_year, end_year, instr_list=instr_list, contract_map=contract_map
@@ -346,7 +347,8 @@ def get_barchart_downloads(
 #
 #         for resolution in ["Hour", "Day"] if do_daily else ["Hour"]:
 #
-#             # regex = re.compile("^" + resolution + "_" + instr_code + "_[0-9]{8}.csv")
+#             # regex = re.compile("^" + resolution + "_" +
+#             instr_code + "_[0-9]{8}.csv")
 #             regex = re.compile(f"^{resolution}_{instr_code}_" + "[0-9]{8}.csv")
 #
 #             file_names = [
@@ -376,7 +378,8 @@ def get_barchart_downloads(
 #                             check_integrity_list.append(file)
 #                             empty_data_list.append(contract_id)
 #                         except RecentUpdateException:
-#                             logging.warning(f"Skipping {contract_id}, recently updated")
+#                             logging.warning(f"Skipping {contract_id},
+#                               recently updated")
 #                         except EmptyDataException:
 #                             logging.info(f"Empty data for {contract_id}")
 #                             empty_data_list.append(contract_id)
@@ -410,9 +413,11 @@ def get_barchart_downloads(
 #     if (now - last_index_date).days < 4:
 #         raise RecentUpdateException(f"Skipping {file}, recently updated")
 #
-#     logging.info(f"Instrument: {instr_code}, contract: {contract_id}, last entry: {last_index_date}")
+#     logging.info(f"Instrument: {instr_code}, contract: {contract_id},
+#       last entry: {last_index_date}")
 #
-#     update = get_historical_futures_data_for_contract(session, contract_id, period=period)
+#     update = get_historical_futures_data_for_contract(session, contract_id,
+#       period=period)
 #     if period == 'hourly':
 #         start = last_index_date + timedelta(hours=1)
 #     else:
@@ -420,7 +425,8 @@ def get_barchart_downloads(
 #     end = now - timedelta(days=2)
 #
 #     if update is not None:
-#         logging.info(f"Adding new rows from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}")
+#         logging.info(f"Adding new rows from {start.strftime('%Y-%m-%d')} to
+#           {end.strftime('%Y-%m-%d')}")
 #         update = update[start:end]
 #         #update = update[update["Volume"] > 0]
 #
