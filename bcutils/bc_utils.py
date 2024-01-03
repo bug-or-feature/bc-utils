@@ -235,7 +235,6 @@ def get_barchart_downloads(
     dry_run=False,
     do_daily=True,
 ):
-
     if contract_map is None:
         contract_map = CONTRACT_MAP
 
@@ -720,7 +719,6 @@ def _env():
 
 
 if __name__ == "__main__":
-
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
         contract_map={
