@@ -226,27 +226,30 @@ def get_barchart_downloads(
     session,
     contract_map=None,
     contract_list=None,
+    instr_list=None,
     save_dir=None,
     start_year=1950,
     end_year=2025,
     dry_run=False,
     do_daily=True,
 ):
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     if contract_map is None:
         contract_map = CONTRACT_MAP
 
     inv_contract_map = _build_inverse_map(contract_map)
 
     try:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
 
         if contract_list is None:
             contract_list = _build_contract_list(
-                start_year, end_year, contract_map=contract_map
+                start_year, end_year, instr_list=instr_list, contract_map=contract_map
             )
 
         for contract in contract_list:
@@ -304,6 +307,7 @@ def get_barchart_downloads(
 
     except Exception as e:  # skipcq broad by design
         logger.error(f"Error {e}")
+        traceback.print_exc()
 
 
 # def update_barchart_prices(
@@ -514,7 +518,7 @@ def get_historical_prices_for_contract(
         raise BCException from ex
 
 
-def _build_contract_list(start_year, end_year, contract_map=None):
+def _build_contract_list(start_year, end_year, instr_list=None, contract_map=None):
     contracts_per_instrument = {}
     contract_list = []
     count = 0
@@ -522,7 +526,10 @@ def _build_contract_list(start_year, end_year, contract_map=None):
     if contract_map is None:
         contract_map = CONTRACT_MAP
 
-    for instr in contract_map.keys():
+    if instr_list is None:
+        instr_list = contract_map.keys()
+
+    for instr in instr_list:
         config_obj = contract_map[instr]
         futures_code = config_obj["code"]
         if futures_code == "none":
