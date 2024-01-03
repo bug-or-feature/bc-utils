@@ -97,7 +97,7 @@ def save_prices_for_contract(
 
         # before we attempt to download hourly data, check there is some
         if period == "hourly" and _insufficient_hourly_data(session, contract):
-            logger.info(f"Skipping hourly prices for '{contract}', insufficient data")
+            logger.info(f"Insufficient hourly data for '{contract}' - skipping\n")
             return HistoricalDataResult.INSUFFICIENT
 
     except Exception as e:  # skipcq broad by design
@@ -266,9 +266,9 @@ def get_barchart_downloads(
 
                 if _before_tick_date(resolution, start_date, instr_config):
                     logger.info(
-                        f"Ignoring request for hourly prices for '{contract}', "
-                        f"{start_date.strftime('%Y-%m-%d')} is before "
-                        f"configured tick date"
+                        f"Hourly prices for {contract} starting "
+                        f"{start_date.strftime('%Y-%m-%d')} is before configured "
+                        f"tick date - skipping\n"
                     )
                     continue
 
