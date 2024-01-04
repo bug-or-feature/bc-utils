@@ -240,6 +240,8 @@ def get_barchart_downloads(
 
     inv_contract_map = _build_inverse_map(contract_map)
 
+    max_exceeded = False
+
     try:
         if contract_list is None:
             contract_list = _build_contract_list(
@@ -247,6 +249,9 @@ def get_barchart_downloads(
             )
 
         for contract in contract_list:
+            if max_exceeded:
+                break
+
             for resolution in ["Hour", "Day"] if do_daily else ["Hour"]:
                 # work out instrument code and get config
                 market_code = contract[: len(contract) - 3]
@@ -288,12 +293,13 @@ def get_barchart_downloads(
                     HistoricalDataResult.INSUFFICIENT,
                 ]:
                     continue
-                if result == HistoricalDataResult.EXCEED:
+                elif result == HistoricalDataResult.EXCEED:
                     logger.info("Max daily download reached, aborting")
+                    max_exceeded = True
                     break
-
-            # cursory attempt to not appear like a bot
-            time.sleep(0 if dry_run else randint(7, 15))
+                else:
+                    # cursory attempt to not appear like a bot
+                    time.sleep(0 if dry_run else randint(7, 15))
 
         # logout
         resp = session.get(BARCHART_URL + "logout", timeout=10)
