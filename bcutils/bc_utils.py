@@ -5,8 +5,8 @@ import json
 import logging
 import os
 import os.path
-
-# import re
+import pytz
+import re
 import time
 import traceback
 import urllib.parse
@@ -38,6 +38,18 @@ class Resolution(enum.Enum):
 
 
 class BCException(Exception):
+    pass
+
+
+class IntegrityException(Exception):
+    pass
+
+
+class RecentUpdateException(Exception):
+    pass
+
+
+class EmptyDataException(Exception):
     pass
 
 
@@ -82,7 +94,12 @@ def create_bc_session(config_obj: dict, do_login=True):
 
 
 def save_prices_for_contract(
-    session, contract, save_path, start_date, end_date, dry_run=False
+    session,
+    contract,
+    save_path,
+    start_date,
+    end_date,
+    dry_run=False,
 ):
     period = _get_period(save_path)
 
@@ -234,6 +251,7 @@ def get_barchart_downloads(
     end_year=2025,
     dry_run=False,
     do_daily=True,
+    pause_between_downloads=True,
 ):
     if contract_map is None:
         contract_map = CONTRACT_MAP
@@ -298,8 +316,9 @@ def get_barchart_downloads(
                     max_exceeded = True
                     break
                 else:
-                    # cursory attempt to not appear like a bot
-                    time.sleep(0 if dry_run else randint(7, 15))
+                    if pause_between_downloads:
+                        # cursory attempt to not appear like a bot
+                        time.sleep(0 if dry_run else randint(7, 15))
 
         # logout
         resp = session.get(BARCHART_URL + "logout", timeout=10)
@@ -310,130 +329,107 @@ def get_barchart_downloads(
         traceback.print_exc()
 
 
-# def update_barchart_prices(
-#         save_dir,
-#         contract_map=None,
-#         instr_code_list=None,
-#         from_date=None,
-#         do_daily=True,
-#         dry_run=False,
-# ):
-#
-#     session = requests.Session()
-#     session.headers.update({'User-Agent': 'Mozilla/5.0'})
-#
-#     check_integrity_list = []
-#     empty_data_list = []
-#
-#     if from_date is None:
-#         from_date = datetime(2023, 1, 1)
-#
-#     if contract_map is None:
-#         contract_map = CONTRACT_MAP
-#
-#     if instr_code_list is None:
-#         instr_code_list = contract_map.keys()
-#
-#     for instr_code in instr_code_list:
-#
-#         print(f"Updating contract prices for {instr_code}")
-#         # barchart_updater(instr_code=code, from_date=datetime(2023, 1, 1),
-#         #                  period=resolution, dry_run=dry_run)
-#
-#         for resolution in ["Hour", "Day"] if do_daily else ["Hour"]:
-#
-#             # regex = re.compile("^" + resolution + "_" +
-#             instr_code + "_[0-9]{8}.csv")
-#             regex = re.compile(f"^{resolution}_{instr_code}_" + "[0-9]{8}.csv")
-#
-#             file_names = [
-#                 fn for fn in os.listdir(save_dir) if regex.match(fn)
-#             ]
-#
-#             for file in file_names:
-#
-#                 logger.info(f"file: {file}")
-#
-#                 instr_code = instr_code_from_file_name(file)
-#                 contract_date = contract_date_from_file_name(file)
-#                 contract_id = get_barchart_id2(instr_code, contract_date.year,
-#                                                contract_date.month)
-#
-#                 if contract_date > from_date:
-#
-#                     if dry_run:
-#                         print(f"Contract {contract_id}, file {file}")
-#                     else:
-#                         try:
-#                             update_barchart_contract_file(session, path, contract_id,
-#                                                           period)
-#                         except IntegrityException:
-#                             logging.error(
-#                                 f"File index problem with {file}, needs manual check")
-#                             check_integrity_list.append(file)
-#                             empty_data_list.append(contract_id)
-#                         except RecentUpdateException:
-#                             logging.warning(f"Skipping {contract_id},
-#                               recently updated")
-#                         except EmptyDataException:
-#                             logging.info(f"Empty data for {contract_id}")
-#                             empty_data_list.append(contract_id)
-#
-#         if len(check_integrity_list) > 0:
-#             print(f"These files have integrity problems: {check_integrity_list}")
-#         if len(empty_data_list) > 0:
-#             print(f"Retry these contracts with daily prices: {empty_data_list}")
-#
-#
-# def update_barchart_contract_file(session, path, contract_id, period='hourly'):
-#
-#     inv_contract_map = build_inverse_map(CONTRACT_MAP)
-#
-#     file = filename_from_barchart_id(contract_id, inv_contract_map)
-#     instr_code = instr_code_from_file_name(file)
-#
-#     now = datetime.now().astimezone(tz=pytz.utc)
-#
-#     input_path = f"{path}/{file}"
-#     logging.info(f"Starting update for {input_path}...")
-#     #
-#     existing = pd.read_csv(input_path)
-#     existing['Time'] = pd.to_datetime(existing['Time'], format='%Y-%m-%dT%H:%M:%S%z')
-#     try:
-#         existing.set_index('Time', inplace=True, verify_integrity=True)
-#         last_index_date = existing.index[-1]
-#     except ValueError:
-#         raise IntegrityException(f"Index problem with {file}, needs manual check")
-#
-#     if (now - last_index_date).days < 4:
-#         raise RecentUpdateException(f"Skipping {file}, recently updated")
-#
-#     logging.info(f"Instrument: {instr_code}, contract: {contract_id},
-#       last entry: {last_index_date}")
-#
-#     update = get_historical_futures_data_for_contract(session, contract_id,
-#       period=period)
-#     if period == 'hourly':
-#         start = last_index_date + timedelta(hours=1)
-#     else:
-#         start = last_index_date + timedelta(hours=25)
-#     end = now - timedelta(days=2)
-#
-#     if update is not None:
-#         logging.info(f"Adding new rows from {start.strftime('%Y-%m-%d')} to
-#           {end.strftime('%Y-%m-%d')}")
-#         update = update[start:end]
-#         #update = update[update["Volume"] > 0]
-#
-#         try:
-#             final = existing.append(update[start:end], verify_integrity=True)
-#             # final = final.tail(180)
-#             output_path = f"{path}/{file}"
-#             final.to_csv(output_path, date_format='%Y-%m-%dT%H:%M:%S%z')
-#         except Exception as ex:
-#             logging.warning(f"Problem with {file}: {ex}")
-#     else:
-#         raise EmptyDataException(f"Empty data for {contract_id}")
+def update_barchart_downloads(
+    instr_code="GOLD", save_dir=None, days_ago=400, dry_run=False
+):
+    if days_ago is None:
+        days_ago = 360
+
+    from_date = datetime.now() - timedelta(days=days_ago)
+
+    session = requests.Session()
+    session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+    check_integrity_list = []
+
+    for resol in ["Hour", "Day"]:
+        regex = re.compile("^" + resol + "_" + instr_code + "_[0-9]{8}.csv")
+
+        file_names = [fn for fn in os.listdir(save_dir) if regex.match(fn)]
+
+        for file in file_names:
+            instr_code = _instr_code_from_file_name(file)
+            contract_date = _contract_date_from_file_name(file)
+            contract_id = _get_barchart_id(
+                instr_code, contract_date.year, contract_date.month
+            )
+
+            if contract_date > from_date:
+                if dry_run:
+                    print(f"DRY RUN: would update contract {contract_id}, file {file}")
+                else:
+                    try:
+                        update_barchart_contract_file(
+                            session, save_dir, contract_id, resol
+                        )
+                    except IntegrityException:
+                        logging.error(f"File index problem with {file}, please check")
+                        check_integrity_list.append(file)
+                    except RecentUpdateException:
+                        logging.warning(f"Skipping {contract_id}, recently updated")
+                    except EmptyDataException:
+                        logging.info(f"Empty data for {contract_id}")
+
+    if len(check_integrity_list) > 0:
+        print(f"These files have integrity problems: {check_integrity_list}")
+
+
+def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
+    inv_contract_map = _build_inverse_map(CONTRACT_MAP)
+
+    file = _filename_from_barchart_id(contract_id, inv_contract_map, resol)
+    instr_code = _instr_code_from_file_name(file)
+
+    now = datetime.now().astimezone(tz=pytz.utc)
+
+    input_path = f"{path}/{file}"
+    logging.info(f"Starting update for {input_path}...")
+
+    existing = pd.read_csv(input_path)
+    existing["Time"] = pd.to_datetime(existing["Time"], format="%Y-%m-%dT%H:%M:%S%z")
+    try:
+        existing.set_index("Time", inplace=True, verify_integrity=True)
+        last_index_date = existing.index[-1]
+    except ValueError:
+        raise IntegrityException(f"Index problem with {file}, needs manual check")
+
+    if (now - last_index_date).days < 4:
+        raise RecentUpdateException(f"Skipping {file}, recently updated")
+
+    logging.info(
+        f"Instrument: {instr_code}, contract: {contract_id}, "
+        f"last entry: {last_index_date}"
+    )
+
+    if resol == "Hour":
+        period = "hourly"
+    elif resol == "Day":
+        period = "daily"
+    else:
+        raise Exception(f"Unexpected resolution: {resol}")
+
+    update = get_historical_prices_for_contract(session, contract_id, Resolution[resol])
+    if period == "hourly":
+        start = last_index_date + timedelta(hours=1)
+    else:
+        start = last_index_date + timedelta(hours=25)
+    end = now - timedelta(days=2)
+
+    if update is not None:
+        logging.info(
+            f"Adding new rows from {start.strftime('%Y-%m-%d')} to "
+            f"{end.strftime('%Y-%m-%d')}"
+        )
+        update = update[start:end]
+
+        try:
+            final = pd.concat([existing, update], verify_integrity=True)
+            output_path = f"{path}/{file}"
+            final.to_csv(output_path, date_format="%Y-%m-%dT%H:%M:%S%z")
+        except Exception as ex:
+            logging.warning(f"Problem with {file}: {ex}")
+    else:
+        raise EmptyDataException(f"Empty data for {contract_id}")
 
 
 def get_historical_prices_for_contract(
@@ -444,7 +440,7 @@ def get_historical_prices_for_contract(
 
     :param session: session
     :type session: requests.Session
-    :param instr_symbol: Barchart contract symbol eg GCM21
+    :param instr_symbol: Barchart contract symbol e.g. GCM21
     :type instr_symbol: str
     :param resolution: frequency of price data requested
     :type resolution: Resolution, 'Day' or 'Hour'
@@ -503,7 +499,7 @@ def get_historical_prices_for_contract(
         df = pd.read_csv(iostr, header=None)
 
         # convert to expected format
-        # price_data_as_df = _raw_barchart_data_to_df(df, bar_freq=bar_freq)
+        price_data_as_df = _raw_barchart_data_to_df(df, bar_freq=resolution)
 
         if len(df) == 0:
             raise BCException(
@@ -512,7 +508,7 @@ def get_historical_prices_for_contract(
 
         logger.debug(f"Latest price {df.index[-1]} with {resolution}")
 
-        return df
+        return price_data_as_df
 
     except Exception as ex:
         logger.error(f"Problem getting historical data: {ex}")
@@ -592,7 +588,7 @@ def _before_tick_date(resolution, start_date, instr_config):
 
 def _get_overview(session, contract_id):
     """
-    GET the futures overview page, eg
+    GET the futures overview page, e.g.
         https://www.barchart.com/futures/quotes/B6M21/overview
     :param contract_id: contract identifier
     :type contract_id: str
@@ -690,27 +686,65 @@ def _raw_barchart_data_to_df(
     price_data_raw: pd.DataFrame,
     bar_freq: Resolution = Resolution.Day,
 ) -> pd.DataFrame:
-    assert price_data_raw
-
-    date_format = "%Y-%m-%d"
+    if price_data_raw is None:
+        logging.warning("No historical price data from Barchart")
+        return None
 
     if bar_freq == Resolution.Day:
-        price_data_as_df = price_data_raw.iloc[:, [1, 2, 3, 4, 5, 7]].copy()
+        dateformat = "%Y-%m-%d"
+        col_no = 1
+        cols_to_remove = [0, 1, 6]
     else:
-        price_data_as_df = price_data_raw.iloc[:, [0, 2, 3, 4, 5, 6]].copy()
-        date_format = "%Y-%m-%d %H:%M"
+        dateformat = "%Y-%m-%d %H:%M"
+        col_no = 0
+        cols_to_remove = [0, 1]
 
-    price_data_as_df.columns = ["index", "OPEN", "HIGH", "LOW", "FINAL", "VOLUME"]
-    price_data_as_df["index"] = pd.to_datetime(
-        price_data_as_df["index"], format=date_format
+    price_data_raw["Date"] = pd.to_datetime(price_data_raw[col_no], format=dateformat)
+    price_data_raw.set_index("Date", inplace=True)
+    price_data_raw.index = price_data_raw.index.tz_localize(tz="US/Central").tz_convert(
+        "UTC"
     )
-    price_data_as_df.set_index("index", inplace=True)
-    price_data_as_df.index = price_data_as_df.index.tz_localize(
-        tz="US/Central"
-    ).tz_convert("UTC")
-    price_data_as_df.index = price_data_as_df.index.tz_localize(tz=None)
+    price_data_raw.index.name = "Time"
+    df = price_data_raw.drop(columns=cols_to_remove)
+    df.columns = ["Open", "High", "Low", "Close", "Volume"]
 
-    return price_data_as_df
+    return df
+
+
+def _get_barchart_id(instr, year, month):
+    instr_config = CONTRACT_MAP[instr]
+    bc_instr = instr_config["code"]
+    month_code = MONTH_LIST[month - 1]
+    year_sub = year - 2000 if year > 2000 else year - 1900
+    bc_id = f"{bc_instr}{month_code}{year_sub}"
+    return bc_id
+
+
+def _instr_code_from_file_name(file_name):
+    instr_code = file_name[file_name.find("_") + 1 : file_name.rfind("_")]
+    return instr_code
+
+
+def _contract_date_from_file_name(file_name):
+    date_str = file_name[-12:-4]
+    logging.debug(f"file: {file_name}, date_str: {date_str}")
+    contract_date = datetime.strptime(f"{date_str[:-2]}01", "%Y%m01")
+    return contract_date
+
+
+def _filename_from_barchart_id(contract_id, inv_map, resol):
+    year_code = int(contract_id[len(contract_id) - 2 :])
+    month_code = contract_id[len(contract_id) - 3]
+    if year_code > 30:
+        year = 1900 + year_code
+    else:
+        year = 2000 + year_code
+    month = _month_from_contract_letter(month_code.upper())
+    market_code = contract_id[: len(contract_id) - 3]
+    instrument = inv_map[market_code.upper()]
+    datecode = str(year) + "{0:02d}".format(month)
+    filename = f"{resol}_{instrument}_{datecode}00.csv"
+    return filename
 
 
 def _env():
@@ -735,3 +769,14 @@ if __name__ == "__main__":
         end_year=2022,
         dry_run=False,
     )
+
+    # do_barchart_updates(
+    #     create_bc_session(config_obj=_env()),
+    #     contract_map={
+    #         "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}
+    #     },
+    #     save_dir="/home/user/barchart_data",
+    #     start_year=2020,
+    #     end_year=2022,
+    #     dry_run=False,
+    # )

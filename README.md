@@ -38,5 +38,4 @@ Features:
 * by default gets 120 days of data per contract, override possible per instrument
 * dry run mode to check setup
 * there is logic to switch to daily data when hourly is not available
-* you must be a registered user. Paid subscribers get 100 downloads a day, otherwise 5
-
+* you must be a registered user. Paid subscribers get 250 downloads a day, otherwise 5

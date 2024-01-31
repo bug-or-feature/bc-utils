@@ -74,6 +74,7 @@ class TestDownloader:
                 start_year=2020,
                 end_year=2021,
                 dry_run=False,
+                pause_between_downloads=False,
             )
 
             csv = download_dir / "Hour_AUD_20200300.csv"
@@ -94,6 +95,7 @@ class TestDownloader:
                 end_year=2021,
                 do_daily=True,
                 dry_run=False,
+                pause_between_downloads=False,
             )
 
             csv = download_dir / "Day_AUD_20200300.csv"
