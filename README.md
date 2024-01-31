@@ -27,9 +27,9 @@ get_barchart_downloads(
 ```
 
 The code above would: 
-* for the CME Australian Dollar future, get hourly OHLCV data for the Mar, Jun, Sep and Dec 2020 contracts
+* for the CME Australian Dollar future, get OHLCV price data for the Mar, Jun, Sep and Dec 2020 contracts
 * download in CSV format
-* save with filenames Hour_AUD_20200300.csv, Hour_AUD_20200600.csv, Hour_AUD_20200900.csv, Hour_AUD_20201200.csv into the specified directory
+* save with filenames like Hour_AUD_20200300.csv, Day_AUD_20200600.csv into the specified directory
 * for COMEX Gold, get Feb, Apr, Jun, Aug, Oct, and Dec data, with filenames like Hour_GOLD_20200200.csv etc
 
 Features:

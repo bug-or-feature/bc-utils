@@ -337,6 +337,8 @@ def update_barchart_downloads(
 
     from_date = datetime.now() - timedelta(days=days_ago)
 
+    logger.info(f"Updating contract prices for {instr_code}")
+
     session = requests.Session()
     session.headers.update({"User-Agent": "Mozilla/5.0"})
 
@@ -363,12 +365,12 @@ def update_barchart_downloads(
                             session, save_dir, contract_id, resol
                         )
                     except IntegrityException:
-                        logging.error(f"File index problem with {file}, please check")
+                        logger.error(f"File index problem with {file}, please check")
                         check_integrity_list.append(file)
                     except RecentUpdateException:
-                        logging.warning(f"Skipping {contract_id}, recently updated")
+                        logger.warning(f"Skipping {contract_id}, recently updated")
                     except EmptyDataException:
-                        logging.info(f"Empty data for {contract_id}")
+                        logger.info(f"Empty data for {contract_id}")
 
     if len(check_integrity_list) > 0:
         print(f"These files have integrity problems: {check_integrity_list}")
@@ -383,7 +385,7 @@ def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
     now = datetime.now().astimezone(tz=pytz.utc)
 
     input_path = f"{path}/{file}"
-    logging.info(f"Starting update for {input_path}...")
+    logger.info(f"Starting update for {input_path}...")
 
     existing = pd.read_csv(input_path)
     existing["Time"] = pd.to_datetime(existing["Time"], format="%Y-%m-%dT%H:%M:%S%z")
@@ -396,7 +398,7 @@ def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
     if (now - last_index_date).days < 4:
         raise RecentUpdateException(f"Skipping {file}, recently updated")
 
-    logging.info(
+    logger.info(
         f"Instrument: {instr_code}, contract: {contract_id}, "
         f"last entry: {last_index_date}"
     )
@@ -416,7 +418,7 @@ def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
     end = now - timedelta(days=2)
 
     if update is not None:
-        logging.info(
+        logger.info(
             f"Adding new rows from {start.strftime('%Y-%m-%d')} to "
             f"{end.strftime('%Y-%m-%d')}"
         )
@@ -427,7 +429,7 @@ def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
             output_path = f"{path}/{file}"
             final.to_csv(output_path, date_format="%Y-%m-%dT%H:%M:%S%z")
         except Exception as ex:
-            logging.warning(f"Problem with {file}: {ex}")
+            logger.warning(f"Problem with {file}: {ex}")
     else:
         raise EmptyDataException(f"Empty data for {contract_id}")
 
@@ -687,7 +689,7 @@ def _raw_barchart_data_to_df(
     bar_freq: Resolution = Resolution.Day,
 ) -> pd.DataFrame:
     if price_data_raw is None:
-        logging.warning("No historical price data from Barchart")
+        logger.warning("No historical price data from Barchart")
         return None
 
     if bar_freq == Resolution.Day:
@@ -727,7 +729,7 @@ def _instr_code_from_file_name(file_name):
 
 def _contract_date_from_file_name(file_name):
     date_str = file_name[-12:-4]
-    logging.debug(f"file: {file_name}, date_str: {date_str}")
+    logger.debug(f"file: {file_name}, date_str: {date_str}")
     contract_date = datetime.strptime(f"{date_str[:-2]}01", "%Y%m01")
     return contract_date
 
