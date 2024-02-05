@@ -24,12 +24,6 @@ CONTRACT_MAP = {
     "DAX": {"code": "DY", "cycle": "HMUZ", "tick_date": "1999-06-23"},
     "DOW": {"code": "YM", "cycle": "HMUZ", "tick_date": "2008-05-04"},
     "DX": {"code": "DX", "cycle": "HMUZ", "tick_date": "2008-05-04"},
-    "EDOLLAR": {
-        "code": "GE",
-        "cycle": "HMUZ",
-        "tick_date": "2008-05-05",
-        "days_count": 1000,
-    },
     "EUA": {
         "code": "CK",
         "cycle": "FGHJKMNQUVXZ",
