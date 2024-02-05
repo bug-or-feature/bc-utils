@@ -33,8 +33,16 @@ class HistoricalDataResult(enum.Enum):
 
 
 class Resolution(enum.Enum):
-    Day = 1
-    Hour = 2
+    Day = (1, "daily")
+    Hour = (2, "hourly")
+
+    def __init__(self, value, adjective):
+        self._value_ = value
+        self._adjective_ = adjective
+
+    @property
+    def adj(self):
+        return self._adjective_
 
 
 class BCException(Exception):
@@ -61,10 +69,8 @@ def create_bc_session(config_obj: dict, do_login=True):
     # start a session
     session = requests.Session()
     session.headers.update({"User-Agent": "Mozilla/5.0"})
-    if (
-        do_login is True
-        and "barchart_username" not in config_obj
-        or "barchart_password" not in config_obj
+    if do_login is True and (
+        "barchart_username" not in config_obj or "barchart_password" not in config_obj
     ):
         raise Exception("Barchart credentials are required")
 
@@ -101,27 +107,26 @@ def save_prices_for_contract(
     end_date,
     dry_run=False,
 ):
-    period = _get_period(save_path)
+    res = _get_resolution(save_path)
 
     try:
         # do we have this file already?
         if os.path.isfile(save_path):
             logger.info(
-                f"{period} data for contract '{contract}' already downloaded "
+                f"{res.adj} data for contract '{contract}' already downloaded "
                 f"({save_path}) - skipping\n"
             )
             return HistoricalDataResult.EXISTS
 
-        # before we attempt to download hourly data, check there is some
-        if period == "hourly" and _insufficient_hourly_data(session, contract):
-            logger.info(f"Insufficient hourly data for '{contract}' - skipping\n")
+        if _insufficient_data(session, contract, res):
+            logger.info(f"Insufficient {res.adj} data for '{contract}' - skipping\n")
             return HistoricalDataResult.INSUFFICIENT
 
     except Exception as e:  # skipcq broad by design
         logger.error(f"Problem: {e}, {traceback.format_exc()}")
 
     logger.info(
-        f"getting historic {period} prices for contract '{contract}', "
+        f"getting historic {res.adj} prices for contract '{contract}', "
         f"from {start_date.strftime('%Y-%m-%d')} "
         f"to {end_date.strftime('%Y-%m-%d')}"
     )
@@ -191,15 +196,17 @@ def save_prices_for_contract(
                 "pageTitle": "Historical Data",
             }
 
-            if period == "daily":
+            if res == Resolution.Day:
                 payload["type"] = "eod"
                 payload["period"] = "daily"
                 dateformat = "%Y-%m-%d"
 
-            if period == "hourly":
+            elif res == Resolution.Hour:
                 payload["type"] = "minutes"
                 payload["interval"] = 60
                 dateformat = "%m/%d/%Y %H:%M"
+            else:
+                raise Exception(f"Unexpected resolution: {res}")
 
             if not dry_run:
                 resp = session.post(
@@ -232,7 +239,7 @@ def save_prices_for_contract(
                 logger.info(f"Not POSTing to {BARCHART_URL + 'my/download'}, dry_run")
 
             logger.info(
-                f"Finished getting Barchart historic {period} prices for {contract}\n"
+                f"Finished getting Barchart historic {res.adj} prices for {contract}\n"
             )
 
         return HistoricalDataResult.OK
@@ -270,7 +277,7 @@ def get_barchart_downloads(
             if max_exceeded:
                 break
 
-            for resolution in ["Hour", "Day"] if do_daily else ["Hour"]:
+            for resolution in Resolution if do_daily else [Resolution.Hour]:
                 # work out instrument code and get config
                 market_code = contract[: len(contract) - 3]
                 instr_code = inv_contract_map[market_code.upper()]
@@ -330,8 +337,13 @@ def get_barchart_downloads(
 
 
 def update_barchart_downloads(
-    instr_code="GOLD", save_dir=None, days_ago=400, dry_run=False
+    instr_code="GOLD", contract_map=None, save_dir=None, days_ago=400, dry_run=False
 ):
+    if contract_map is None:
+        contract_map = CONTRACT_MAP
+
+    inv_contract_map = _build_inverse_map(contract_map)
+
     if days_ago is None:
         days_ago = 360
 
@@ -344,8 +356,8 @@ def update_barchart_downloads(
 
     check_integrity_list = []
 
-    for resol in ["Hour", "Day"]:
-        regex = re.compile("^" + resol + "_" + instr_code + "_[0-9]{8}.csv")
+    for res in Resolution:
+        regex = re.compile("^" + res.name + "_" + instr_code + "_[0-9]{8}.csv")
 
         file_names = [fn for fn in os.listdir(save_dir) if regex.match(fn)]
 
@@ -362,7 +374,7 @@ def update_barchart_downloads(
                 else:
                     try:
                         update_barchart_contract_file(
-                            session, save_dir, contract_id, resol
+                            session, inv_contract_map, save_dir, contract_id, res
                         )
                     except IntegrityException:
                         logger.error(f"File index problem with {file}, please check")
@@ -376,10 +388,10 @@ def update_barchart_downloads(
         print(f"These files have integrity problems: {check_integrity_list}")
 
 
-def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
-    inv_contract_map = _build_inverse_map(CONTRACT_MAP)
-
-    file = _filename_from_barchart_id(contract_id, inv_contract_map, resol)
+def update_barchart_contract_file(
+    session, inv_contract_map, path, contract_id, res: Resolution
+):
+    file = _filename_from_barchart_id(contract_id, inv_contract_map, res)
     instr_code = _instr_code_from_file_name(file)
 
     now = datetime.now().astimezone(tz=pytz.utc)
@@ -403,15 +415,8 @@ def update_barchart_contract_file(session, path, contract_id, resol="Hour"):
         f"last entry: {last_index_date}"
     )
 
-    if resol == "Hour":
-        period = "hourly"
-    elif resol == "Day":
-        period = "daily"
-    else:
-        raise Exception(f"Unexpected resolution: {resol}")
-
-    update = get_historical_prices_for_contract(session, contract_id, Resolution[resol])
-    if period == "hourly":
+    update = get_historical_prices_for_contract(session, contract_id, res)
+    if res == Resolution.Hour:
         start = last_index_date + timedelta(hours=1)
     else:
         start = last_index_date + timedelta(hours=25)
@@ -603,13 +608,13 @@ def _get_overview(session, contract_id):
     return resp
 
 
-def _build_save_path(instr_code, month, year, resolution, save_directory):
+def _build_save_path(instr_code, month, year, res: Resolution, save_directory):
     if save_directory is None:
         download_dir = os.getcwd()
     else:
         download_dir = save_directory
     datecode = str(year) + "{0:02d}".format(month)
-    filename = f"{resolution}_{instr_code}_{datecode}00.csv"
+    filename = f"{res.name}_{instr_code}_{datecode}00.csv"
     save_path = f"{download_dir}/{filename}"
     return save_path
 
@@ -625,9 +630,9 @@ def _get_contract_month_year(contract):
     return month, year
 
 
-def _insufficient_hourly_data(session, symbol):
+def _insufficient_data(session, symbol: str, res: Resolution):
     try:
-        df = get_historical_prices_for_contract(session, symbol, Resolution.Hour)
+        df = get_historical_prices_for_contract(session, symbol, res)
         return len(df) < 30
     except Exception:  # skipcq broad by design
         return True
@@ -672,16 +677,13 @@ def _month_from_contract_letter(contract_letter):
     return month_number + 1
 
 
-def _get_period(save_path):
+def _get_resolution(save_path):
     path_obj = Path(save_path)
-    resol = path_obj.name.split("_")[0]
-    if resol == "Hour":
-        period = "hourly"
-    elif resol == "Day":
-        period = "daily"
-    else:
-        raise Exception(f"Unexpected resolution: {resol}")
-    return period
+    resol_str = path_obj.name.split("_")[0]
+    try:
+        return Resolution[resol_str]
+    except KeyError:
+        raise Exception("Unknown resolution")
 
 
 def _raw_barchart_data_to_df(
@@ -690,7 +692,7 @@ def _raw_barchart_data_to_df(
 ) -> pd.DataFrame:
     if price_data_raw is None:
         logger.warning("No historical price data from Barchart")
-        return None
+        return pd.DataFrame([])
 
     if bar_freq == Resolution.Day:
         dateformat = "%Y-%m-%d"
@@ -734,19 +736,16 @@ def _contract_date_from_file_name(file_name):
     return contract_date
 
 
-def _filename_from_barchart_id(contract_id, inv_map, resol):
-    year_code = int(contract_id[len(contract_id) - 2 :])
-    month_code = contract_id[len(contract_id) - 3]
-    if year_code > 30:
-        year = 1900 + year_code
-    else:
-        year = 2000 + year_code
-    month = _month_from_contract_letter(month_code.upper())
-    market_code = contract_id[: len(contract_id) - 3]
-    instrument = inv_map[market_code.upper()]
-    datecode = str(year) + "{0:02d}".format(month)
-    filename = f"{resol}_{instrument}_{datecode}00.csv"
-    return filename
+def _filename_from_barchart_id(contract_id, inv_map, res: Resolution):
+    try:
+        month, year = _get_contract_month_year(contract_id)
+        market_code = contract_id[: len(contract_id) - 3]
+        instrument = inv_map[market_code.upper()]
+        datecode = str(year) + "{0:02d}".format(month)
+        filename = f"{res.name}_{instrument}_{datecode}00.csv"
+        return filename
+    except Exception as ex:
+        raise Exception(f"Problem creating filename: {ex}")
 
 
 def _env():
@@ -761,6 +760,7 @@ def _env():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
         contract_map={
