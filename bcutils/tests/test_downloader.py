@@ -2,6 +2,7 @@ import os
 import pytest
 
 from bcutils.bc_utils import (
+    Resolution,
     get_barchart_downloads,
     create_bc_session,
     save_prices_for_contract,
@@ -108,7 +109,9 @@ class TestDownloader:
         else:
             contract_key = "UPU14"
             month, year = _get_contract_month_year(contract_key)
-            save_path = _build_save_path("CHFJPY", month, year, "Hour", os.getcwd())
+            save_path = _build_save_path(
+                "CHFJPY", month, year, Resolution.Hour, os.getcwd()
+            )
             start_date, end_date = _get_start_end_dates(month, year)
 
             result = save_prices_for_contract(
