@@ -524,14 +524,15 @@ def update_barchart_contract_file(
 
 
 def get_historical_prices_for_contract(
-    session, instr_symbol: str, resolution: Resolution = Resolution.Day
+    session, instr_code: str, resolution: Resolution = Resolution.Day
 ) -> pd.DataFrame:
-    assert instr_symbol
+    if not instr_code:
+        raise BCException("instr_code is required")
 
     try:
         # GET the futures quote chart page, scrape to get XSRF token
         # https://www.barchart.com/futures/quotes/GCM21/interactive-chart
-        chart_url = BARCHART_URL + f"futures/quotes/{instr_symbol}/interactive-chart"
+        chart_url = BARCHART_URL + f"futures/quotes/{instr_code}/interactive-chart"
         chart_resp = session.get(chart_url)
         xsrf = urllib.parse.unquote(chart_resp.cookies["XSRF-TOKEN"])
 
@@ -543,7 +544,7 @@ def get_historical_prices_for_contract(
         }
 
         payload = {
-            "symbol": instr_symbol,
+            "symbol": instr_code,
             "maxrecords": "640",
             "volume": "contract",
             "order": "asc",
@@ -568,7 +569,7 @@ def get_historical_prices_for_contract(
         if int(ratelimit) <= 15:
             time.sleep(20)
         logger.info(
-            f"GET {data_url} {instr_symbol}, {prices_resp.status_code}, "
+            f"GET {data_url} {instr_code}, {prices_resp.status_code}, "
             f"ratelimit {ratelimit}"
         )
 
@@ -581,7 +582,7 @@ def get_historical_prices_for_contract(
 
         if len(df) == 0:
             raise BCException(
-                f"Zero length Barchart price data found for {instr_symbol}"
+                f"Zero length Barchart price data found for {instr_code}"
             )
 
         logger.debug(f"Latest price {df.index[-1]} with {resolution}")
