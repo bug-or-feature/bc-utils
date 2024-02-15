@@ -26,21 +26,25 @@ def migrate_to_multi_freq(prices_dir: str, codes: list, dry_run=True):
             print(f"{file}: rows: {len(df)}, average shift diff: {ts_diff_mean}")
 
             if pd.isnull(ts_diff_mean):
-                delete(full_path, dry_run)
+                delete(full_path, dry_run, reason="pd.isnull(ts_diff_mean)")
             elif len(df) <= 21:
-                delete(full_path, dry_run)
+                delete(full_path, dry_run, reason="len(df) <= 21")
             elif ts_diff_mean.days >= 3:
-                delete(full_path, dry_run)
+                delete(full_path, dry_run, reason="ts_diff_mean.days >= 3")
             elif ts_diff_mean.days > 1:
                 rename(file, full_path, "Day", prices_dir, dry_run)
             elif ts_diff_mean.days == 1:
-                if ts_diff_mean.seconds > 10800:  # 3hrs - arbitrary, but probably safe
-                    delete(full_path, dry_run)
+                if ts_diff_mean.seconds > 64800:  # 18hrs - arbitrary, test with dry_run
+                    delete(
+                        full_path,
+                        dry_run,
+                        reason=f"ts_diff_mean.seconds > 64800 ({ts_diff_mean.seconds})",
+                    )
                 else:
                     rename(file, full_path, "Day", prices_dir, dry_run)
             elif ts_diff_mean.days == 0:
                 if ts_diff_mean.seconds == 0:
-                    delete(full_path, dry_run)
+                    delete(full_path, dry_run, reason="ts_diff_mean.seconds == 0")
                 else:
                     rename(file, full_path, "Hour", prices_dir, dry_run)
             else:
@@ -55,11 +59,11 @@ def rename(file, full_path, freq, prices_dir, dry_run=False):
         shutil.move(full_path, f"{prices_dir}/{freq}_{file}")
 
 
-def delete(full_path, dry_run=False):
+def delete(full_path, dry_run=False, reason="Dunno"):
     if dry_run:
-        print(f"Would delete: {full_path}\n")
+        print(f"Would delete: {full_path}, because {reason}\n")
     else:
-        print(f"Deleting: {full_path}\n")
+        print(f"Deleting: {full_path}, because {reason}\n")
         os.remove(full_path)
 
 
@@ -67,5 +71,5 @@ if __name__ == "__main__":
     migrate_to_multi_freq(
         "/home/user/prices/barchart",
         ["SEK"],
-        # dry_run=False,
+        dry_run=True,
     )
