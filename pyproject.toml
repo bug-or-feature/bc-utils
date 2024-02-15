@@ -18,6 +18,8 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
     "License :: OSI Approved :: BSD License",
@@ -27,15 +29,16 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-requests = "^2.26"
-numpy = ">=1.19.4,<1.24.0"
-pandas = ">1,<=1.0.5"
+python = ">=3.8.1,<4.0"
+requests = "^2"
+pandas = "<3"
 beautifulsoup4 = "^4"
+pyyaml = "^6.0.1"
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.2"
-flake8 = "^4.0.1"
+[tool.poetry.group.dev.dependencies]
+black = "^23.12.1"
+pytest = "^7"
+flake8 = "^6"
 
 [tool.poetry.urls]
 "Issues" = "https://github.com/bug-or-feature/bc-utils/issues"
@@ -43,3 +46,8 @@ flake8 = "^4.0.1"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+required-version = '23.12.1'

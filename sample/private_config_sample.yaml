@@ -1,0 +1,13 @@
+barchart_username: 'user@domain.com'
+barchart_password: 's3cr3t_321'
+barchart_path: '/home/user/data/barchart'
+barchart_download_list:
+  - BITCOIN
+  - CHFJPY
+barchart_update_list:
+  - BITCOIN
+  - CHFJPY
+barchart_start_year: 2000
+barchart_end_year: 2025
+barchart_dry_run: True
+barchart_do_daily: True
