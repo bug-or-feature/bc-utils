@@ -581,9 +581,7 @@ def get_historical_prices_for_contract(
         price_data_as_df = _raw_barchart_data_to_df(df, bar_freq=resolution)
 
         if len(df) == 0:
-            raise BCException(
-                f"Zero length Barchart price data found for {instr_code}"
-            )
+            raise BCException(f"Zero length Barchart price data found for {instr_code}")
 
         logger.debug(f"Latest price {df.index[-1]} with {resolution}")
 
