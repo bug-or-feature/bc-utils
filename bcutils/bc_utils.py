@@ -66,13 +66,28 @@ BARCHART_URL = "https://www.barchart.com/"
 
 
 def create_bc_session(config_obj: dict, do_login=True):
-    # start a session
+    """
+    Create and return a web session, optionally logging into Barchart with the supplied
+    credentials.
+
+    Args:
+        config_obj: dict containing Barchart credentials, with keys `barchart_username`
+            and `barchart_password`
+        do_login: if True, authenticate session with Barchart credentials
+
+    Returns:
+        A requests.Session instance
+
+    Raises:
+        Exception: if credentials are invalid
+    """
+
     session = requests.Session()
     session.headers.update({"User-Agent": "Mozilla/5.0"})
     if do_login is True and (
         "barchart_username" not in config_obj or "barchart_password" not in config_obj
     ):
-        raise Exception("Barchart credentials are required")
+        raise BCException("Missing credentials")
 
     if do_login:
         # GET the login page, scrape to get CSRF token
@@ -94,19 +109,34 @@ def create_bc_session(config_obj: dict, do_login=True):
         resp = session.post(BARCHART_URL + "login", data=payload)
         logger.info(f"POST {BARCHART_URL + 'login'}, status: {resp.status_code}")
         if resp.url == BARCHART_URL + "login":
-            raise Exception("Invalid Barchart credentials")
+            raise BCException("Invalid credentials")
 
     return session
 
 
 def save_prices_for_contract(
-    session,
-    contract,
-    save_path,
-    start_date,
-    end_date,
-    dry_run=False,
+    session: requests.Session,
+    contract: str,
+    save_path: str,
+    start_date: datetime,
+    end_date: datetime,
+    dry_run: bool = False,
 ):
+    """
+    Save prices for an individual futures contract.
+
+    Args:
+        session: requests.Session instance
+        contract: Barchart style contract identifier, eg GCH24 for March 2024 Gold
+        save_path: full path where price file will be saved
+        start_date: start date
+        end_date: end date
+        dry_run: if True, provides useful diagnostic info but does not execute
+
+    Returns:
+        A HistoricalDataResult instance, representing the result of the operation
+    """
+
     res = _get_resolution(save_path)
 
     try:
@@ -196,6 +226,7 @@ def save_prices_for_contract(
                 "pageTitle": "Historical Data",
             }
 
+            dateformat = "%m/%d/%Y %H:%M"
             if res == Resolution.Day:
                 payload["type"] = "eod"
                 payload["period"] = "daily"
@@ -204,9 +235,6 @@ def save_prices_for_contract(
             elif res == Resolution.Hour:
                 payload["type"] = "minutes"
                 payload["interval"] = 60
-                dateformat = "%m/%d/%Y %H:%M"
-            else:
-                raise Exception(f"Unexpected resolution: {res}")
 
             if not dry_run:
                 resp = session.post(
@@ -249,17 +277,37 @@ def save_prices_for_contract(
 
 
 def get_barchart_downloads(
-    session,
-    contract_map=None,
-    contract_list=None,
-    instr_list=None,
-    save_dir=None,
-    start_year=1950,
-    end_year=2025,
-    dry_run=False,
-    do_daily=True,
-    pause_between_downloads=True,
+    session: requests.Session,
+    contract_map: dict = None,
+    contract_list: list = None,
+    instr_list: list = None,
+    save_dir: str = None,
+    start_year: int = 1950,
+    end_year: int = 2025,
+    dry_run: bool = False,
+    do_daily: bool = True,
+    pause_between_downloads: bool = True,
 ):
+    """
+    Run a download session, performing as many contract downloads as possible, given
+    the config, parameters, existing files, and available daily allowance.
+
+    Args:
+        session: requests.Session instance
+        contract_map: dict containing instrument config
+        contract_list: optional list of Barchart contract IDs we want to download in
+            this run. If provided, `start_year` and `start_year` are ignored. If not
+            provided, a list will be created based on the parameters. See
+            `_build_contract_list()`
+        instr_list: list of instrument codes (eg GOLD, AUD) we want to download in this
+            run
+        save_dir: full path to the directory where we want downloaded files to be saved
+        start_year: start year as an int
+        end_year: end year as an int
+        dry_run: if True, provides useful diagnostic info but does not execute
+        do_daily: if True, download daily as well as hourly price files
+        pause_between_downloads: if True, wait a random short period between downloads
+    """
     if contract_map is None:
         contract_map = CONTRACT_MAP
 
@@ -337,15 +385,30 @@ def get_barchart_downloads(
 
 
 def update_barchart_downloads(
-    instr_code="GOLD", contract_map=None, save_dir=None, days_ago=400, dry_run=False
+    instr_code: str = "GOLD",
+    contract_map: dict = None,
+    save_dir: str = None,
+    days_ago: int = 360,
+    dry_run: bool = False,
 ):
+    """
+    Update recent previously downloaded files for an instrument.
+
+    Considers previously downloaded contract files where the contract date is more
+    recent than `days_ago`. For each file, will update it with any new price data rows,
+    given the existing resolution.
+
+    Args:
+        instr_code: instrument code (eg GOLD)
+        contract_map: dict containing instrument config
+        save_dir: full path to the directory where previously downloaded files are
+            located
+        days_ago: how many days to look back. A file's contract date is assumed to be
+            the 1st of the month. So GCH23 would be 1st March 2023
+        dry_run: if True, provides useful diagnostic info but does not execute
+    """
     if contract_map is None:
         contract_map = CONTRACT_MAP
-
-    inv_contract_map = _build_inverse_map(contract_map)
-
-    if days_ago is None:
-        days_ago = 360
 
     from_date = datetime.now() - timedelta(days=days_ago)
 
@@ -374,7 +437,7 @@ def update_barchart_downloads(
                 else:
                     try:
                         update_barchart_contract_file(
-                            session, inv_contract_map, save_dir, contract_id, res
+                            session, contract_map, save_dir, contract_id, res
                         )
                     except IntegrityException:
                         logger.error(f"File index problem with {file}, please check")
@@ -389,8 +452,29 @@ def update_barchart_downloads(
 
 
 def update_barchart_contract_file(
-    session, inv_contract_map, path, contract_id, res: Resolution
+    session: requests.Session,
+    contract_map: dict,
+    path: str,
+    contract_id: str,
+    res: Resolution,
 ):
+    """
+    Update a previously downloaded contract price file.
+
+    Args:
+        session: requests.Session instance
+        contract_map: dict containing instrument config
+        path: full path to the directory where previously downloaded files are located
+        contract_id: Barchart style contract identifier, eg GCH24 for March 2024 Gold
+        res: Resolution.Hour or Resolution.Day
+    Raises:
+        IntegrityException: raised if a problem is encountered when trying to set the
+            datetime column as index
+        RecentUpdateException: raised if the file has been recently updated
+        EmptyDataException: raised if the update contains no data
+    """
+    inv_contract_map = _build_inverse_map(contract_map)
+
     file = _filename_from_barchart_id(contract_id, inv_contract_map, res)
     instr_code = _instr_code_from_file_name(file)
 
@@ -442,19 +526,6 @@ def update_barchart_contract_file(
 def get_historical_prices_for_contract(
     session, instr_symbol: str, resolution: Resolution = Resolution.Day
 ) -> pd.DataFrame:
-    """
-    Get historical price data
-
-    :param session: session
-    :type session: requests.Session
-    :param instr_symbol: Barchart contract symbol e.g. GCM21
-    :type instr_symbol: str
-    :param resolution: frequency of price data requested
-    :type resolution: Resolution, 'Day' or 'Hour'
-    :return: df
-    :rtype: pandas DataFrame
-    """
-
     assert instr_symbol
 
     try:
@@ -640,7 +711,6 @@ def _insufficient_data(session, symbol: str, res: Resolution):
 
 def _get_start_end_dates(month, year, instr_config=None):
     now = datetime.now()
-
     if instr_config and "days_count" in instr_config:
         day_count = instr_config["days_count"]
     else:
@@ -655,7 +725,7 @@ def _get_start_end_dates(month, year, instr_config=None):
     if now.date() < end_date.date():
         end_date = now
 
-    # assumption no.2: lets set start date at <day_count> days before end date
+    # let's set start date at <day_count> days before end date
     day_count = timedelta(days=day_count)
     start_date = end_date - day_count
 
@@ -683,7 +753,7 @@ def _get_resolution(save_path):
     try:
         return Resolution[resol_str]
     except KeyError:
-        raise Exception("Unknown resolution")
+        raise BCException(f"Unknown resolution: {resol_str}")
 
 
 def _raw_barchart_data_to_df(
