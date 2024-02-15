@@ -36,7 +36,7 @@ jobs:
     - name: Prettify with black
       uses: psf/black@stable
       with:
-        version: "23.11.0"
+        version: "23.12.1"
 
     - name: Lint with flake8
       run: |
