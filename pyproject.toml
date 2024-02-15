@@ -50,4 +50,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.black]
 line-length = 88
 target-version = ['py310']
-required-version = '23.12.1'
+required-version = '23.11.0'
