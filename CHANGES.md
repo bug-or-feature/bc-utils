@@ -1,5 +1,8 @@
 # Release notes
 
+## 0.1.5 (2024-02-19)
+* restructured config, exchange specifies tick date and eod date
+ 
 ## 0.1.4 (2024-02-14)
 * now downloads hourly and daily prices to separate files, eg Day_GOLD_20230200.csv, Hour_GOLD_20230400.csv
 * better logic for handling periods with no or low data
