@@ -19,7 +19,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from bcutils.config import CONTRACT_MAP
+from bcutils.config import CONTRACT_MAP, EXCHANGES
 
 logger = logging.getLogger(__name__)
 
@@ -342,11 +342,12 @@ def get_barchart_downloads(
                 # calculate date range
                 start_date, end_date = _get_start_end_dates(month, year, instr_config)
 
-                if _before_tick_date(resolution, start_date, instr_config):
+                if _before_available_res(resolution, start_date, instr_config):
+                    date_type = "tick" if resolution == Resolution.Hour else "EOD"
                     logger.info(
-                        f"Hourly prices for {contract} starting "
+                        f"{resolution.adj} prices for {contract} starting "
                         f"{start_date.strftime('%Y-%m-%d')} is before configured "
-                        f"tick date - skipping\n"
+                        f"{date_type} date - skipping\n"
                     )
                     continue
 
@@ -654,13 +655,21 @@ def _build_inverse_map(contract_map):
     return {v["code"]: k for k, v in contract_map.items()}
 
 
-def _before_tick_date(resolution, start_date, instr_config):
-    if "tick_date" in instr_config:
-        tick_date = datetime.strptime(instr_config["tick_date"], "%Y-%m-%d")
-    else:
-        tick_date = None
+def _before_available_res(resolution, start_date, instr_config):
+    if "exchange" in instr_config:
+        exch = instr_config["exchange"]
+        if exch not in EXCHANGES:
+            raise BCException(f"Missing exchange config for {exch}")
+        exch_config = EXCHANGES[exch]
+        tick_date = datetime.strptime(exch_config["tick_date"], "%Y-%m-%d")
+        eod_date = datetime.strptime(exch_config["eod_date"], "%Y-%m-%d")
 
-    return resolution == "Hour" and tick_date is not None and start_date < tick_date
+        if resolution == Resolution.Hour:
+            return tick_date is not None and start_date < tick_date
+        else:
+            return eod_date is not None and start_date < eod_date
+    else:
+        raise BCException(f"No exchange specified for {instr_config['code']}")
 
 
 def _get_overview(session, contract_id):
@@ -833,7 +842,7 @@ if __name__ == "__main__":
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
         contract_map={
-            "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}
+            "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
         },
         save_dir="/home/user/barchart_data",
         start_year=2020,
@@ -844,7 +853,7 @@ if __name__ == "__main__":
     # do_barchart_updates(
     #     create_bc_session(config_obj=_env()),
     #     contract_map={
-    #         "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}
+    #         "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
     #     },
     #     save_dir="/home/user/barchart_data",
     #     start_year=2020,

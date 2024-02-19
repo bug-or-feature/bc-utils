@@ -12,8 +12,8 @@ from bcutils.bc_utils import get_barchart_downloads, create_bc_session
 logging.basicConfig(level=logging.INFO)
 
 CONTRACTS = {
-    "AUD" : {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"},
-    "GOLD" : {"code": "GC", "cycle": "GJMQVZ", "tick_date": "2008-05-04"},
+    "AUD" : {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
+    "GOLD" : {"code": "GC", "cycle": "GJMQVZ", "exchange": "COMEX"},
 }
 
 session = create_bc_session(
@@ -48,8 +48,7 @@ Features:
 
 ## For pysystemtrade users
 
-This project was originally created to make it easier to populate [pysystemtrade](https://github.com/robcarver17/pysystemtrade) (PST) with futures prices from Barchart, so setup is straightforward.
-Steps:
+This project was originally created to make it easier to populate [pysystemtrade](https://github.com/robcarver17/pysystemtrade) (PST) with futures prices from Barchart, so setup is straightforward. Steps:
 
 1. Clone the bc-utils repo, or your own fork. The remaining steps assume the location `~/bc-utils`
 
@@ -57,11 +56,21 @@ Steps:
 ```python
 CONTRACT_MAP = {
     ...
-    "GOLD": {"code": "GC", "cycle": "GJMQVZ", "tick_date": "2008-05-04"},
+    "GOLD": {"code": "GC", "cycle": "GJMQVZ", "exchange": "COMEX"},
     ...
 }
 ```
-indicates that instrument with PST code **GOLD** has the Barchart symbol **GC**, months **GJMQVZ**, and hourly resolution from 4 April 2008. Those *tick_date* attributes are [provided by Barchart](https://www.barchart.com/solutions/data/market), and turn out to be inaccurate. Previous versions of this library would waste valuable allowance by attempting to download data that was not there. Newer versions handle this much better. If you use this library to download prices that are not in the config file, please consider contributing with a PR.
+indicates that instrument with PST code **GOLD** has the Barchart symbol **GC**, months **GJMQVZ**, and exchange **COMEX**. It also contains date config for various Futures exchanges. For example,
+
+```python
+EXCHANGES = {
+    ...
+    "COMEX": {"tick_date": "2008-05-04", "eod_date": "1978-02-27"},
+    ...
+}
+```
+
+That indicates that futures instruments with exchange **COMEX** have daily price data from 27 Feb 1978, and hourly from 4 May 2008. Those date attributes are [provided by Barchart](https://www.barchart.com/solutions/data/market), and turn out to be inaccurate. Previous versions of this library would waste valuable allowance by attempting to download data that was not there. Newer versions handle this much better. If you use this library to download prices that are not in the config file, please consider contributing with a PR.
 
 3. Have a look at the sample snippets in `~bc-utils/sample/pst.py`. There are examples for use with an external config file. Use the sample config `~bc-utils/sample/private_config_sample.yaml`, copy and rename to the top level of the `~bc-utils` dir. Update with your credentials and save path etc
 

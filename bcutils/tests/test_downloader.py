@@ -36,7 +36,7 @@ class TestDownloader:
             get_barchart_downloads(
                 create_bc_session(config_obj={}),
                 contract_map={
-                    "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}
+                    "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}
                 },
                 save_dir=download_dir,
                 start_year=2020,
@@ -54,7 +54,7 @@ class TestDownloader:
                     )
                 ),
                 contract_map={
-                    "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}
+                    "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}
                 },
                 save_dir=download_dir,
                 start_year=2020,
@@ -68,9 +68,7 @@ class TestDownloader:
         else:
             get_barchart_downloads(
                 create_bc_session(config_obj=bc_config),
-                contract_map={
-                    "AUD": {"code": "A6", "cycle": "H", "tick_date": "2009-11-24"}
-                },
+                contract_map={"AUD": {"code": "A6", "cycle": "H", "exchange": "CME"}},
                 save_dir=download_dir,
                 start_year=2020,
                 end_year=2021,
@@ -88,9 +86,7 @@ class TestDownloader:
         else:
             get_barchart_downloads(
                 create_bc_session(config_obj=bc_config),
-                contract_map={
-                    "AUD": {"code": "A6", "cycle": "H", "tick_date": "2009-11-24"}
-                },
+                contract_map={"AUD": {"code": "A6", "cycle": "H", "exchange": "CME"}},
                 save_dir=download_dir,
                 start_year=2020,
                 end_year=2021,

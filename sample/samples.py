@@ -24,9 +24,7 @@ def download_hourly():
     # (in dry_run mode)
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
-        contract_map={
-            "FTSE100": {"code": "X", "cycle": "HMUZ", "tick_date": "2002-01-01"}
-        },
+        contract_map={"FTSE100": {"code": "X", "cycle": "HMUZ", "exchange": "ICE"}},
         save_dir=os.getcwd(),
         start_year=2020,
         end_year=2021,
@@ -40,9 +38,7 @@ def download_hourly_and_daily():
     # (in dry_run mode)
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
-        contract_map={
-            "FTSE100": {"code": "X", "cycle": "HMUZ", "tick_date": "2002-01-01"}
-        },
+        contract_map={"FTSE100": {"code": "X", "cycle": "HMUZ", "exchange": "ICE"}},
         save_dir=os.getcwd(),
         start_year=2020,
         end_year=2021,
@@ -56,9 +52,7 @@ def download_specific_contracts():
     # (in dry_run mode)
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
-        contract_map={
-            "FTSE100": {"code": "X", "cycle": "HMUZ", "tick_date": "2002-01-01"}
-        },
+        contract_map={"FTSE100": {"code": "X", "cycle": "HMUZ", "exchange": "ICE"}},
         contract_list=["XH18", "XM19", "XU20"],
         save_dir=os.getcwd(),
         dry_run=True,
@@ -110,9 +104,7 @@ def update_downloads():
     # update any hourly or daily AUD price files in the current working directory
     update_barchart_downloads(
         instr_code="AUD",
-        contract_map={
-            "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}
-        },
+        contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}},
         save_dir=os.getcwd(),
         dry_run=False,
     )
@@ -120,7 +112,7 @@ def update_downloads():
 
 def update_hourly_file():
     # update the hourly AUD Mar 2024 price file in the current working directory
-    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}}
+    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
     update_barchart_contract_file(
         create_bc_session(config_obj=_env()),
         _build_inverse_map(contract_map),
@@ -132,7 +124,7 @@ def update_hourly_file():
 
 def update_daily_file():
     # update the daily AUD Mar 2024 price file in the current working directory
-    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"}}
+    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
     update_barchart_contract_file(
         create_bc_session(config_obj=_env()),
         _build_inverse_map(contract_map),

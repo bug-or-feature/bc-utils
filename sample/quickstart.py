@@ -5,8 +5,8 @@ from bcutils.bc_utils import get_barchart_downloads, create_bc_session
 logging.basicConfig(level=logging.INFO)
 
 CONTRACTS = {
-    "AUD": {"code": "A6", "cycle": "HMUZ", "tick_date": "2009-11-24"},
-    "GOLD": {"code": "GC", "cycle": "GJMQVZ", "tick_date": "2008-05-04"},
+    "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
+    "GOLD": {"code": "GC", "cycle": "GJMQVZ", "exchange": "COMEX"},
 }
 
 session = create_bc_session(

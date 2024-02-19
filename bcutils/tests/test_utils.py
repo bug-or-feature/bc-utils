@@ -1,15 +1,18 @@
 import pytest
+from datetime import datetime
 
 from bcutils.bc_utils import (
     Resolution,
     CONTRACT_MAP,
     create_bc_session,
+    BCException,
     _build_save_path,
     _env,
     _get_resolution,
     _filename_from_barchart_id,
     _build_inverse_map,
     _insufficient_data,
+    _before_available_res,
 )
 
 INV_MAP = _build_inverse_map(CONTRACT_MAP)
@@ -66,3 +69,34 @@ class TestUtils:
             "TGF08",
             Resolution.Day,
         )
+
+    def test_before_available_res(self):
+        assert _before_available_res(
+            Resolution.Day, datetime(1975, 1, 1), CONTRACT_MAP["AUD"]
+        )
+
+        assert not _before_available_res(
+            Resolution.Day, datetime(1978, 3, 24), CONTRACT_MAP["AUD"]
+        )
+
+        assert _before_available_res(
+            Resolution.Hour, datetime(2007, 1, 1), CONTRACT_MAP["GOLD"]
+        )
+
+        assert not _before_available_res(
+            Resolution.Hour, datetime(2008, 6, 1), CONTRACT_MAP["GOLD"]
+        )
+
+        with pytest.raises(BCException):
+            _before_available_res(
+                Resolution.Hour,
+                datetime(2007, 1, 1),
+                {"code": "XX", "cycle": "HMUZ", "exchange": "BLAH"},
+            )
+
+        with pytest.raises(BCException):
+            _before_available_res(
+                Resolution.Hour,
+                datetime(2007, 1, 1),
+                {"code": "ABC", "cycle": "HMUZ"},
+            )
