@@ -837,6 +837,31 @@ def _env():
     return barchart_config
 
 
+def _get_exchange_for_code(session, contract_code: str):
+    """
+    Get the exchange for the given Barchart code
+
+    Scrapes the info page for the given contract to grab the exchange
+    :param futures_contract:
+    :return: str
+    """
+    try:
+        resp = _get_overview(session, contract_code)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            table = soup.find(name="div", attrs={"class": "commodity-profile"})
+            label = table.find(name="div", string="Exchange")
+            exchange_raw = label.next_sibling.next_sibling  # whitespace counts
+            exchange = exchange_raw.text.strip()
+            return exchange
+        if resp.status_code == 404:
+            print(f"Barchart page for {contract_code} not found")
+
+    except Exception as e:
+        print("Error: %s" % e)
+        return None
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     get_barchart_downloads(

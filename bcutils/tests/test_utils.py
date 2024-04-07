@@ -13,6 +13,7 @@ from bcutils.bc_utils import (
     _build_inverse_map,
     _insufficient_data,
     _before_available_res,
+    _get_exchange_for_code,
 )
 
 INV_MAP = _build_inverse_map(CONTRACT_MAP)
@@ -100,3 +101,10 @@ class TestUtils:
                 datetime(2007, 1, 1),
                 {"code": "ABC", "cycle": "HMUZ"},
             )
+
+    def test_get_exchange(self):
+        exch = _get_exchange_for_code(
+            create_bc_session(config_obj=_env(), do_login=False),
+            "GCF24"
+        )
+        assert exch == "COMEX"
