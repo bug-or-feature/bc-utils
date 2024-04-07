@@ -27,7 +27,7 @@ CONTRACT_MAP = {
     "CHFJPY": {"code": "UP", "cycle": "HMUZ", "exchange": "CME"},
     "CLP": {"code": "N5", "cycle": "FGHJKMNQUVXZ", "exchange": "CME"},
     "CNH-onshore": {"code": "ZP", "cycle": "FGHJKMNQUVXZ", "exchange": "ICE/SG"},
-    "COCOA_LDN": {"code": "CA", "cycle": "HKNUZ", "exchange": "ICE/EU"},
+    "COCOA_LDN": {"code": "CA", "cycle": "HKNUZ", "exchange": "ICE/EU/Com"},
     "COCOA_NY": {"code": "CC", "cycle": "HKNUZ", "exchange": "ICE/US"},
     "COFFEE": {"code": "KC", "cycle": "HKNUZ", "exchange": "ICE/US"},
     "COPPER": {"code": "HG", "cycle": "FHJMNUVZ", "exchange": "COMEX"},
