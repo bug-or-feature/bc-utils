@@ -104,7 +104,6 @@ class TestUtils:
 
     def test_get_exchange(self):
         exch = _get_exchange_for_code(
-            create_bc_session(config_obj=_env(), do_login=False),
-            "GCF24"
+            create_bc_session(config_obj=_env(), do_login=False), "GCF24"
         )
         assert exch == "COMEX"
