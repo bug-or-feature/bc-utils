@@ -61,7 +61,7 @@ CONTRACT_MAP = {
     },
     "EUR": {"code": "E6", "cycle": "FGHJKMNQUVXZ", "exchange": "CME"},
     "EURAUD": {"code": "UC", "cycle": "HMUZ", "exchange": "CME"},
-    "EURCAD": {"code": "EP", "cycle": "HMUZ", "exchange": "ICE/US"},   
+    "EURCAD": {"code": "EP", "cycle": "HMUZ", "exchange": "ICE/US"},
     "EURCHF": {"code": "RF", "cycle": "HMUZ", "exchange": "CME"},
     "EURGBP": {"code": "RP", "cycle": "HMUZ", "exchange": "CME"},
     "EURIBOR": {"code": "TV", "cycle": "HMUZ", "exchange": "EUREX"},
@@ -139,8 +139,8 @@ CONTRACT_MAP = {
     "LEANHOG": {"code": "HE", "cycle": "GJKMNQVZ", "exchange": "CME"},
     "LIVECOW": {"code": "LE", "cycle": "GJMQVZ", "exchange": "CME"},
     "LUMBER-new": {"code": "LB", "cycle": "FHKNUX", "exchange": "CME"},
-    # Replace MSCIASIA EUREX symbol if available to match pysystemtrade
-    "MSCIASIA": {"code": "L5", "cycle": "HMUZ", "exchange": "ICE/US"},  
+    # Replace MSCIASIA with EUREX symbol if available to match pysystemtrade
+    "MSCIASIA": {"code": "L5", "cycle": "HMUZ", "exchange": "ICE/US"},
     "MSCISING": {"code": "SV", "cycle": "FGHJKMNQUVXZ", "exchange": "SGX"},
     "MID-DAX": {"code": "DM", "cycle": "HMUZ", "exchange": "EUREX"},
     "MILK": {"code": "DL", "cycle": "FGHJKMNQUVXZ", "exchange": "CME"},
