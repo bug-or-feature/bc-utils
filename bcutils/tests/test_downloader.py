@@ -63,6 +63,7 @@ class TestDownloader:
             )
 
     def test_hourly(self, bc_config, download_dir):
+        print(bc_config.keys())
         if len(bc_config) == 0:
             pytest.skip("Skipping test, no Barchart credentials found in env")
         else:
