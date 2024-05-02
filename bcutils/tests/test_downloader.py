@@ -82,7 +82,7 @@ class TestDownloader:
             assert not csv.is_dir()
 
     def test_daily(self, bc_config, download_dir):
-        if len(bc_config) == 0:
+        if not self._have_creds(bc_config):
             pytest.skip("Skipping test, no Barchart credentials found in env")
         else:
             get_barchart_downloads(
@@ -101,7 +101,7 @@ class TestDownloader:
             assert not csv.is_dir()
 
     def test_insufficient(self, bc_config, download_dir):
-        if len(bc_config) == 0:
+        if not self._have_creds(bc_config):
             pytest.skip("Skipping test, no Barchart credentials found in env")
         else:
             contract_key = "UPU14"
@@ -120,3 +120,12 @@ class TestDownloader:
             )
 
             assert result == HistoricalDataResult.INSUFFICIENT
+
+    @staticmethod
+    def _have_creds(config: dict):
+        return (
+            "barchart_username" in config
+            and config["barchart_username"]
+            and "barchart_password" in config
+            and config["barchart_password"]
+        )
