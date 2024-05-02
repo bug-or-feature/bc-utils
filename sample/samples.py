@@ -16,6 +16,7 @@ from bcutils.bc_utils import (
 )
 from bcutils.migrate import migrate_to_multi_freq
 from bcutils.config import CONTRACT_MAP
+
 logging.basicConfig(level=logging.INFO)
 
 
