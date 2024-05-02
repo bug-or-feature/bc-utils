@@ -15,7 +15,7 @@ from bcutils.bc_utils import (
     _env,
 )
 from bcutils.migrate import migrate_to_multi_freq
-
+from bcutils.config import CONTRACT_MAP
 logging.basicConfig(level=logging.INFO)
 
 
@@ -122,14 +122,14 @@ def update_hourly_file():
     )
 
 
-def update_daily_file():
-    # update the daily AUD Mar 2024 price file in the current working directory
-    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
+def update_daily_file(contract_key, config=None):
+    if config is None:
+        config = CONTRACT_MAP
     update_barchart_contract_file(
         create_bc_session(config_obj=_env()),
-        _build_inverse_map(contract_map),
+        config,
         os.getcwd(),
-        "A6H24",
+        contract_key,
         Resolution.Day,
     )
 
@@ -153,5 +153,5 @@ if __name__ == "__main__":
     # save_hourly("CHFJPY", "UPU14")
     # update_downloads()
     # update_hourly_file()
-    # update_daily_file()
+    # update_daily_file("EPM24")
     # rename_files_with_new_format()
