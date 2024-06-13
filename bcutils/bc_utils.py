@@ -539,7 +539,7 @@ def get_historical_prices_for_contract(
 
         headers = {
             "content-type": "text/plain; charset=UTF-8",
-            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
             "Referer": chart_url,
             "x-xsrf-token": xsrf,
         }
@@ -551,21 +551,23 @@ def get_historical_prices_for_contract(
             "order": "asc",
             "dividends": "false",
             "backadjust": "false",
-            "days to expiration": "1",
+            "daystoexpiration": "1",
             "contractroll": "combined",
         }
 
         if resolution == Resolution.Day:
-            data_url = BARCHART_URL + "proxies/timeseries/queryeod.ashx"
+            data_url = BARCHART_URL + "proxies/timeseries/historical/queryeod.ashx"
             payload["data"] = "daily"
-            payload["contractroll"] = "expiration"
         else:
-            data_url = BARCHART_URL + "proxies/timeseries/queryminutes.ashx"
+            data_url = BARCHART_URL + "proxies/timeseries/historical/queryminutes.ashx"
             payload["interval"] = "60"
-            payload["contractroll"] = "combined"
 
         # get prices for instrument from BC internal API
         prices_resp = session.get(data_url, headers=headers, params=payload)
+        if prices_resp.status_code != 200:
+            raise Exception(
+                f"response status: {prices_resp.status_code} {prices_resp.reason}"
+            )
         ratelimit = prices_resp.headers["x-ratelimit-remaining"]
         if int(ratelimit) <= 15:
             time.sleep(20)
