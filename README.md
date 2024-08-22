@@ -96,14 +96,15 @@ def download_with_pst_config():
 ```
 You could also add another entry to run the updater once a week.
 
-5. To import the prices into PST:
+5. To import the prices into PST (_see below_):
 
 ```python
 from sysdata.config.production_config import get_production_config
 from syscore.fileutils import resolve_path_and_filename_for_package
 from sysdata.csv.csv_futures_contract_prices import ConfigCsvFuturesPrices
-from sysinit.futures.contract_prices_from_csv_to_arctic import (
-    init_db_with_csv_futures_contract_prices,
+from sysinit.futures.contract_prices_from_split_freq_csv_to_db import (
+    init_db_with_split_freq_csv_prices,
+    init_db_with_split_freq_csv_prices_for_code,
 )
 
 BARCHART_CONFIG = ConfigCsvFuturesPrices(
@@ -121,5 +122,11 @@ datapath = resolve_path_and_filename_for_package(
     get_production_config().get_element_or_default("barchart_path", None)
 )
 
-init_db_with_csv_futures_contract_prices(datapath, csv_config=BARCHART_CONFIG)
+# for all instruments
+init_db_with_split_freq_csv_prices(datapath, csv_config=BARCHART_CONFIG)
+
+# or for a single instrument
+init_db_with_split_freq_csv_prices_for_code("GOLD", datapath=datapath, csv_config=BARCHART_CONFIG)
 ```
+
+**_NOTE:_** `contract_prices_from_split_freq_csv_to_db.py` is not currently merged into PST. Grab the code either from the [PR](https://github.com/robcarver17/pysystemtrade/pull/1397) or from [my fork](https://github.com/bug-or-feature/pysystemtrade-fsb/blob/dev/sysinit/futures/contract_prices_from_split_freq_csv_to_db.py)
