@@ -103,7 +103,6 @@ from sysdata.config.production_config import get_production_config
 from syscore.fileutils import resolve_path_and_filename_for_package
 from sysdata.csv.csv_futures_contract_prices import ConfigCsvFuturesPrices
 from sysinit.futures.contract_prices_from_split_freq_csv_to_db import (
-    init_db_with_split_freq_csv_prices,
     init_db_with_split_freq_csv_prices_for_code,
 )
 
@@ -122,10 +121,7 @@ datapath = resolve_path_and_filename_for_package(
     get_production_config().get_element_or_default("barchart_path", None)
 )
 
-# for all instruments
-init_db_with_split_freq_csv_prices(datapath, csv_config=BARCHART_CONFIG)
-
-# or for a single instrument
+# import prices for a single instrument
 init_db_with_split_freq_csv_prices_for_code("GOLD", datapath=datapath, csv_config=BARCHART_CONFIG)
 ```
 
