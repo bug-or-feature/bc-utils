@@ -214,7 +214,7 @@ CONTRACT_MAP = {
     "US10": {"code": "ZN", "cycle": "HMUZ", "exchange": "CBOT"},
     "US10U": {"code": "TN", "cycle": "HMUZ", "exchange": "CBOT"},
     "US2": {"code": "ZT", "cycle": "HMUZ", "exchange": "CBOT"},
-    "US30": {"code": "UB", "cycle": "HMUZ", "exchange": "CME"},
+    "US30": {"code": "UD", "cycle": "HMUZ", "exchange": "CBOT"},
     "US30Y": {"code": "ZB", "cycle": "HMUZ", "exchange": "CBOT"},
     "US5": {"code": "ZF", "cycle": "HMUZ", "exchange": "CBOT"},
     "US-DISCRETE": {"code": "BI", "cycle": "HMUZ", "exchange": "CME"},
