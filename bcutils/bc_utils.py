@@ -620,16 +620,24 @@ def _build_contract_list(start_year, end_year, instr_list=None, contract_map=Non
                     f"{futures_code}{month_code}{str(year)[len(str(year))-2:]}"
                 )
         contracts_per_instrument[instr] = instrument_list
+        logger.info(f"Adding {len(instrument_list)} contracts for {instr}")
         count = count + len(instrument_list)
 
     logger.info(f"Contract count: {count}")
 
     pool = cycle(contract_map.keys())
 
+    # Count how many contracts are actually available to prevent infinite loops
+    available_contracts = sum(len(contracts_per_instrument.get(instr, [])) for instr in contract_map.keys())
+    if available_contracts < count:
+        logger.warning(f"Only {available_contracts} contracts available but count is set to {count}. Adjusting count.")
+        count = available_contracts
+
     while len(contract_list) < count:
         try:
             instr = next(pool)
         except StopIteration:
+            logger.warning("Reached the end of the pool unexpectedly")
             continue
         if instr not in contracts_per_instrument:
             continue
