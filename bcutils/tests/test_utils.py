@@ -14,6 +14,8 @@ from bcutils.bc_utils import (
     _insufficient_data,
     _before_available_res,
     _get_exchange_for_code,
+    _instr_code_from_file_name,
+    _res_from_file_name,
 )
 
 INV_MAP = _build_inverse_map(CONTRACT_MAP)
@@ -107,3 +109,19 @@ class TestUtils:
             create_bc_session(config_obj=_env(), do_login=False), "GCF24"
         )
         assert exch == "COMEX"
+
+    def test_get_instr_code_from_file_name_split(self):
+        instr_code = _instr_code_from_file_name("Day_EURIBOR-ICE_20240900")
+        assert instr_code == "EURIBOR-ICE"
+
+    def test_get_instr_code_from_file_name_not(self):
+        instr_code = _instr_code_from_file_name("SOFR_20240900", split_freq=False)
+        assert instr_code == "SOFR"
+
+    def test_get_instr_code_from_file_name_double_not(self):
+        instr_code = _instr_code_from_file_name("GAS_US_20240900", split_freq=False)
+        assert instr_code == "GAS_US"
+
+    def test_res_from_file_name_split(self):
+        res = _res_from_file_name("Day_EURIBOR-ICE_20240900")
+        assert res == Resolution.Day

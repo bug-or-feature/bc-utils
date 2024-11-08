@@ -287,6 +287,7 @@ def get_barchart_downloads(
     dry_run: bool = False,
     do_daily: bool = True,
     pause_between_downloads: bool = True,
+    default_day_count: int = 400,
 ):
     """
     Run a download session, performing as many contract downloads as possible, given
@@ -307,6 +308,7 @@ def get_barchart_downloads(
         dry_run: if True, provides useful diagnostic info but does not execute
         do_daily: if True, download daily as well as hourly price files
         pause_between_downloads: if True, wait a random short period between downloads
+        default_day_count: default number of days of data to download
     """
     if contract_map is None:
         contract_map = CONTRACT_MAP
@@ -340,7 +342,12 @@ def get_barchart_downloads(
                 )
 
                 # calculate date range
-                start_date, end_date = _get_start_end_dates(month, year, instr_config)
+                start_date, end_date = _get_start_end_dates(
+                    month,
+                    year,
+                    instr_config,
+                    default_day_count=default_day_count,
+                )
 
                 if _before_available_res(resolution, start_date, instr_config):
                     date_type = "tick" if resolution == Resolution.Hour else "EOD"
@@ -391,6 +398,7 @@ def update_barchart_downloads(
     save_dir: str = None,
     days_ago: int = 360,
     dry_run: bool = False,
+    split_freq: bool = True,
 ):
     """
     Update recent previously downloaded files for an instrument.
@@ -407,6 +415,7 @@ def update_barchart_downloads(
         days_ago: how many days to look back. A file's contract date is assumed to be
             the 1st of the month. So GCH23 would be 1st March 2023
         dry_run: if True, provides useful diagnostic info but does not execute
+        split_freq: True if we are expecting to find split frequency files
     """
     if contract_map is None:
         contract_map = CONTRACT_MAP
@@ -420,36 +429,50 @@ def update_barchart_downloads(
 
     check_integrity_list = []
 
-    for res in Resolution:
-        regex = re.compile("^" + res.name + "_" + instr_code + "_[0-9]{8}.csv")
+    file_names = _get_filenames(instr_code, save_dir, split_freq)
 
-        file_names = [fn for fn in os.listdir(save_dir) if regex.match(fn)]
+    for file in file_names:
+        instr_code = _instr_code_from_file_name(file, split_freq=split_freq)
+        if split_freq:
+            res = _res_from_file_name(file)
+        else:
+            res = None
+        contract_date = _contract_date_from_file_name(file)
+        contract_id = _get_barchart_id(
+            instr_code, contract_date.year, contract_date.month
+        )
 
-        for file in file_names:
-            instr_code = _instr_code_from_file_name(file)
-            contract_date = _contract_date_from_file_name(file)
-            contract_id = _get_barchart_id(
-                instr_code, contract_date.year, contract_date.month
-            )
-
-            if contract_date > from_date:
-                if dry_run:
-                    print(f"DRY RUN: would update contract {contract_id}, file {file}")
-                else:
-                    try:
-                        update_barchart_contract_file(
-                            session, contract_map, save_dir, contract_id, res
-                        )
-                    except IntegrityException:
-                        logger.error(f"File index problem with {file}, please check")
-                        check_integrity_list.append(file)
-                    except RecentUpdateException:
-                        logger.warning(f"Skipping {contract_id}, recently updated")
-                    except EmptyDataException:
-                        logger.info(f"Empty data for {contract_id}")
+        if contract_date > from_date:
+            if dry_run:
+                print(f"DRY RUN: would update contract {contract_id}, file {file}")
+            else:
+                try:
+                    update_barchart_contract_file(
+                        session, contract_map, save_dir, contract_id, res
+                    )
+                except IntegrityException:
+                    logger.error(f"File index problem with {file}, please check")
+                    check_integrity_list.append(file)
+                except RecentUpdateException:
+                    logger.warning(f"Skipping {contract_id}, recently updated")
+                except EmptyDataException:
+                    logger.info(f"Empty data for {contract_id}")
 
     if len(check_integrity_list) > 0:
         print(f"These files have integrity problems: {check_integrity_list}")
+
+
+def _get_filenames(instr_code, save_dir, split_freq: bool = True):
+    file_names = []
+    if split_freq:
+        for res in Resolution:
+            regex = re.compile("^" + res.name + "_" + instr_code + "_[0-9]{8}.csv")
+            file_names.extend([fn for fn in os.listdir(save_dir) if regex.match(fn)])
+    else:
+        regex = re.compile("^" + instr_code + "_[0-9]{8}.csv")
+        file_names.extend([fn for fn in os.listdir(save_dir) if regex.match(fn)])
+
+    return file_names
 
 
 def update_barchart_contract_file(
@@ -477,7 +500,7 @@ def update_barchart_contract_file(
     inv_contract_map = _build_inverse_map(contract_map)
 
     file = _filename_from_barchart_id(contract_id, inv_contract_map, res)
-    instr_code = _instr_code_from_file_name(file)
+    instr_code = _instr_code_from_file_name(file, res is not None)
 
     now = datetime.now().astimezone(tz=pytz.utc)
 
@@ -620,16 +643,29 @@ def _build_contract_list(start_year, end_year, instr_list=None, contract_map=Non
                     f"{futures_code}{month_code}{str(year)[len(str(year))-2:]}"
                 )
         contracts_per_instrument[instr] = instrument_list
+        logger.info(f"Adding {len(instrument_list)} contracts for {instr}")
         count = count + len(instrument_list)
 
     logger.info(f"Contract count: {count}")
 
     pool = cycle(contract_map.keys())
 
+    # Count how many contracts are actually available to prevent infinite loops
+    available_contracts = sum(
+        len(contracts_per_instrument.get(instr, [])) for instr in contract_map.keys()
+    )
+    if available_contracts < count:
+        logger.warning(
+            f"Only {available_contracts} contracts available but count is set "
+            f"to {count}. Adjusting count."
+        )
+        count = available_contracts
+
     while len(contract_list) < count:
         try:
             instr = next(pool)
         except StopIteration:
+            logger.warning("Reached the end of the pool unexpectedly")
             continue
         if instr not in contracts_per_instrument:
             continue
@@ -719,12 +755,12 @@ def _insufficient_data(session, symbol: str, res: Resolution):
         return True
 
 
-def _get_start_end_dates(month, year, instr_config=None):
+def _get_start_end_dates(month, year, instr_config=None, default_day_count: int = 400):
     now = datetime.now()
     if instr_config and "days_count" in instr_config:
         day_count = instr_config["days_count"]
     else:
-        day_count = 120
+        day_count = default_day_count
 
     # we need to work out a date range for which we want the prices
     # for expired contracts the end date would be the expiry date;
@@ -804,9 +840,18 @@ def _get_barchart_id(instr, year, month):
     return bc_id
 
 
-def _instr_code_from_file_name(file_name):
-    instr_code = file_name[file_name.find("_") + 1 : file_name.rfind("_")]
+def _instr_code_from_file_name(file_name, split_freq: bool = True):
+    if split_freq:
+        instr_code = file_name[file_name.find("_") + 1 : file_name.rfind("_")]
+    else:
+        instr_code = file_name[: file_name.rfind("_")]
     return instr_code
+
+
+def _res_from_file_name(file_name):
+    res_str = file_name[: file_name.find("_")]
+    res = Resolution[res_str]
+    return res
 
 
 def _contract_date_from_file_name(file_name):
@@ -822,7 +867,10 @@ def _filename_from_barchart_id(contract_id, inv_map, res: Resolution):
         market_code = contract_id[: len(contract_id) - 3]
         instrument = inv_map[market_code.upper()]
         datecode = str(year) + "{0:02d}".format(month)
-        filename = f"{res.name}_{instrument}_{datecode}00.csv"
+        if res is None:
+            filename = f"{instrument}_{datecode}00.csv"
+        else:
+            filename = f"{res.name}_{instrument}_{datecode}00.csv"
         return filename
     except Exception as ex:
         raise Exception(f"Problem creating filename: {ex}")
@@ -844,7 +892,7 @@ def _get_exchange_for_code(session, contract_code: str):
     Get the exchange for the given Barchart code
 
     Scrapes the info page for the given contract to grab the exchange
-    :param futures_contract:
+    :param contract_code:
     :return: str
     """
     try:
