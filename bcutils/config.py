@@ -1,7 +1,6 @@
 CONTRACT_MAP = {
     "AEX": {"code": "AE", "cycle": "FGHJKMNQUVXZ", "exchange": "EuronextInd"},
     "ALUMINIUM": {"code": "AL", "cycle": "FGHJKMNQUVXZ", "exchange": "COMEX"},
-    "ASX": {"code": "AP", "cycle": "FGHJKMNQUVXZ", "exchange": "SFE"},
     "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
     "AUDJPY": {"code": "UK", "cycle": "HMUZ", "exchange": "CME"},
     "BB3M": {"code": "BR", "cycle": "HMUZ", "exchange": "CME"},
@@ -186,6 +185,7 @@ CONTRACT_MAP = {
     "SP400": {"code": "EW", "cycle": "HMUZ", "exchange": "CME"},
     "SP500": {"code": "ES", "cycle": "HMUZ", "exchange": "CME"},
     "SP500_micro": {"code": "ET", "cycle": "HMUZ", "exchange": "CME"},
+    "SPI200": {"code": "AP", "cycle": "FGHJKMNQUVXZ", "exchange": "SFE"},
     "STEEL": {"code": "HV", "cycle": "FGHJKMNQUVXZ", "exchange": "COMEX"},
     "SUGAR": {"code": "SW", "cycle": "HKQVZ", "exchange": "ICE/EU/Com"},
     "SUGAR11": {"code": "SB", "cycle": "HKNV", "days_count": 200, "exchange": "ICE/US"},
