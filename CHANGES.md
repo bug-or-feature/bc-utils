@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.1.7 (2024-12-28)
+* updated date format in hourly prices (#27)
+* file updates include Volume instead of Open Interest (#25)
+* allow update of split frequency price files
+* fixed config for US30
+* new markets in config
+
 ## 0.1.6 (2024-06-13)
 * additional markets
 * updated URL
