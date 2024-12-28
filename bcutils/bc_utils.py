@@ -226,7 +226,7 @@ def save_prices_for_contract(
                 "pageTitle": "Historical Data",
             }
 
-            dateformat = "%m/%d/%Y %H:%M"
+            dateformat = "%Y-%m-%d %H:%M"
             if res == Resolution.Day:
                 payload["type"] = "eod"
                 payload["period"] = "daily"
@@ -915,12 +915,11 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
-        contract_map={
-            "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
-        },
+        instr_list=["NZD"],
+        start_year=2023,
+        end_year=2024,
         save_dir="/home/user/barchart_data",
-        start_year=2020,
-        end_year=2022,
+        do_daily=True,
         dry_run=False,
     )
 
