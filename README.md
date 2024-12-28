@@ -26,9 +26,10 @@ session = create_bc_session(
 get_barchart_downloads(
     session,
     contract_map=CONTRACTS,
+    instr_list=["AUD", "GOLD"],
     save_dir=os.getcwd(),
     start_year=2020,
-    end_year=2021
+    end_year=2021,
 )
 ```
 
