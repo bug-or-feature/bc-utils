@@ -26,9 +26,10 @@ session = create_bc_session(
 get_barchart_downloads(
     session,
     contract_map=CONTRACTS,
+    instr_list=["AUD", "GOLD"],
     save_dir=os.getcwd(),
     start_year=2020,
-    end_year=2021
+    end_year=2021,
 )
 ```
 
@@ -124,5 +125,3 @@ datapath = resolve_path_and_filename_for_package(
 # import prices for a single instrument
 init_db_with_split_freq_csv_prices_for_code("GOLD", datapath=datapath, csv_config=BARCHART_CONFIG)
 ```
-
-**_NOTE:_** `contract_prices_from_split_freq_csv_to_db.py` is not currently merged into PST. Grab the code either from the [PR](https://github.com/robcarver17/pysystemtrade/pull/1397) or from [my fork](https://github.com/bug-or-feature/pysystemtrade-fsb/blob/dev/sysinit/futures/contract_prices_from_split_freq_csv_to_db.py)

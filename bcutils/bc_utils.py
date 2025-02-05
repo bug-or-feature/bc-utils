@@ -226,7 +226,7 @@ def save_prices_for_contract(
                 "pageTitle": "Historical Data",
             }
 
-            dateformat = "%m/%d/%Y %H:%M"
+            dateformat = "%Y-%m-%d %H:%M"
             if res == Resolution.Day:
                 payload["type"] = "eod"
                 payload["period"] = "daily"
@@ -528,14 +528,13 @@ def update_barchart_contract_file(
         start = last_index_date + timedelta(hours=1)
     else:
         start = last_index_date + timedelta(hours=25)
-    end = now - timedelta(days=2)
 
     if update is not None:
         logger.info(
             f"Adding new rows from {start.strftime('%Y-%m-%d')} to "
-            f"{end.strftime('%Y-%m-%d')}"
+            f"{now.strftime('%Y-%m-%d')}"
         )
-        update = update[start:end]
+        update = update[start:]
 
         try:
             final = pd.concat([existing, update], verify_integrity=True)
@@ -813,7 +812,7 @@ def _raw_barchart_data_to_df(
     if bar_freq == Resolution.Day:
         dateformat = "%Y-%m-%d"
         col_no = 1
-        cols_to_remove = [0, 1, 6]
+        cols_to_remove = [0, 1, 7]
     else:
         dateformat = "%Y-%m-%d %H:%M"
         col_no = 0
@@ -916,22 +915,20 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     get_barchart_downloads(
         create_bc_session(config_obj=_env()),
-        contract_map={
-            "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
-        },
+        instr_list=["NZD"],
+        start_year=2023,
+        end_year=2024,
         save_dir="/home/user/barchart_data",
-        start_year=2020,
-        end_year=2022,
+        do_daily=True,
         dry_run=False,
     )
 
-    # do_barchart_updates(
-    #     create_bc_session(config_obj=_env()),
+    # update_barchart_downloads(
+    #     instr_code="FANG",
     #     contract_map={
-    #         "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
+    #         "FANG": {"code": "FG", "cycle": "HMUZ", "exchange": "ICE/US"},
     #     },
     #     save_dir="/home/user/barchart_data",
-    #     start_year=2020,
-    #     end_year=2022,
     #     dry_run=False,
+    #     days_ago=360,
     # )
