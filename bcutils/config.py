@@ -1,6 +1,7 @@
 CONTRACT_MAP = {
     "AEX": {"code": "AE", "cycle": "FGHJKMNQUVXZ", "exchange": "EuronextInd"},
     "ALUMINIUM": {"code": "AL", "cycle": "FGHJKMNQUVXZ", "exchange": "COMEX"},
+    "ALUMINIUM_LME": {"code": "Q8", "cycle": "FGHJKMNQUVXZ", "exchange": "LME"},
     "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"},
     "AUDJPY": {"code": "UK", "cycle": "HMUZ", "exchange": "CME"},
     "BB3M": {"code": "BR", "cycle": "HMUZ", "exchange": "CME"},
@@ -238,6 +239,7 @@ EXCHANGES = {
     "ICE/EU/Fin": {"tick_date": "1999-06-21", "eod_date": "1982-11-04"},
     "ICE/SG": {"tick_date": "2010-03-09", "eod_date": "2010-03-09"},
     "ICE/US": {"tick_date": "2008-05-04", "eod_date": "1978-08-07"},
+    "LME": {"tick_date": "2008-05-05", "eod_date": "2011-12-16"},
     "JPX": {"tick_date": "1992-01-06", "eod_date": "1992-01-06"},
     "KCBT": {"tick_date": "2008-07-14", "eod_date": "1979-03-26"},
     "MEFF": {"tick_date": "1992-09-29", "eod_date": "1992-09-29"},
