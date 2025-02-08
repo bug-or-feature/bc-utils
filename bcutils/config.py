@@ -126,7 +126,7 @@ CONTRACT_MAP = {
     "IRON": {"code": "C0", "cycle": "FGHJKMNQUVXZ", "exchange": "SGX"},
     "INR": {"code": "U-", "cycle": "FGHJKMNQUVXZ", "exchange": "SGX"},
     "IRS": {"code": "WY", "cycle": "HMUZ", "exchange": "CME"},
-    "JGB": {"code": "JX", "cycle": "HMUZ", "exchange": "SGX"},
+    "JGB": {"code": "TJ", "cycle": "HMUZ", "exchange": "JPX"},
     "JGB-SGX-mini": {"code": "JX", "cycle": "HMUZ", "exchange": "SGX"},
     "JPY": {"code": "J6", "cycle": "HMUZ", "exchange": "CME"},
     "JP-REALESTATE": {"code": "V.", "cycle": "HMUZ", "exchange": "JPX"},
