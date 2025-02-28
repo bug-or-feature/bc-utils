@@ -1,6 +1,6 @@
 # bc-utils
 
-[Barchart.com](https://www.barchart.com) allows registered users to download historic futures contract prices in CSV format. Individual contracts must be downloaded separately, which is laborious and slow. This script automates the process.
+[Barchart.com](https://www.barchart.com) allows registered users to download historic futures contract prices in CSV format. Individual contracts must be downloaded separately, which is laborious and slow. This script automates the process for daily and hourly data.
 
 ## Quickstart
 
