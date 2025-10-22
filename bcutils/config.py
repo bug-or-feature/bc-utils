@@ -144,7 +144,12 @@ CONTRACT_MAP = {
     "LIVECOW": {"code": "LE", "cycle": "GJMQVZ", "exchange": "CME"},
     "LUMBER-new": {"code": "LB", "cycle": "FHKNUX", "exchange": "CME"},
     # Replace MSCIASIA with EUREX symbol if available to match pysystemtrade
-    "MSCIEMASIA": {"code": "L5", "cycle": "M", "days_count": 1000, "exchange": "ICE/US"},
+    "MSCIEMASIA": {
+        "code": "L5",
+        "cycle": "M",
+        "days_count": 1000,
+        "exchange": "ICE/US",
+    },
     "MSCISING": {"code": "SV", "cycle": "FGHJKMNQUVXZ", "exchange": "SGX"},
     "MID-DAX": {"code": "DM", "cycle": "HMUZ", "exchange": "EUREX"},
     "MILK": {"code": "DL", "cycle": "FGHJKMNQUVXZ", "exchange": "CME"},
