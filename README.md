@@ -47,6 +47,15 @@ Features:
 * allows updates to previously downloaded files
 * you must be a registered user. Paid subscribers get 250 downloads a day, otherwise 5
 
+Suggested setup process:
+- Create a virtual environment (recommended method: uv venv process: https://docs.astral.sh/uv/pip/environments/)
+- Install bs4, requests, PyYAML and pandas in the virtual environment; these are the necessary items to properly run bc-utils
+- Follow the instructions below on setting up the private_config_sample.yaml file
+- Add instruments to the barchart_download_list and the barchart_update_list
+- Initially leave barchart_dry_run set to TRUE to verify that bc-utils is properly interfacing with barchart
+- When ready, set barchart_dry_run to FALSE and download data
+- Observe the allowance number; bc-utils will stop when you reach the barchart limit of 250 per day
+
 ## For pysystemtrade users
 
 This project was originally created to make it easier to populate [pysystemtrade](https://github.com/robcarver17/pysystemtrade) (PST) with futures prices from Barchart, so setup is straightforward. Steps:
