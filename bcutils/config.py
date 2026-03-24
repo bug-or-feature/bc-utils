@@ -83,7 +83,7 @@ CONTRACT_MAP = {
     "EU-BASIC": {"code": "UJ", "cycle": "HMUZ", "exchange": "EUREX"},
     "EU-BANKS": {"code": "FA", "cycle": "HMUZ", "exchange": "EUREX"},
     "EU-CHEM": {"code": "C1", "cycle": "HMUZ", "exchange": "EUREX"},
-    "EU-CONSTRUCTION": {"code": "C1", "cycle": "HMUZ", "exchange": "EUREX"},
+    "EU-CONSTRUCTION": {"code": "DMM", "cycle": "HMUZ", "exchange": "EUREX"},
     "EU-DIV50": {"code": "DO", "cycle": "MZ", "exchange": "EUREX"},
     "EU-DIV30": {"code": "AQ", "cycle": "HMUZ", "exchange": "EUREX"},
     "EU-DJ-OIL": {"code": "D9", "cycle": "HMUZ", "exchange": "EUREX"},
