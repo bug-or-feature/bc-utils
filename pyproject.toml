@@ -1,12 +1,13 @@
-[tool.poetry]
+[project]
 name = "bc-utils"
 version = "0.1.7"
 description = "Python utility automation scripts for Barchart.com"
-authors = ["Andy Geach <andy@bugorfeature.net>"]
+authors = [
+    { name = "Andy Geach", email = "andy@bugorfeature.net" }
+]
 license = "BSD-3-Clause"
 readme = "README.md"
-homepage = "https://github.com/bug-or-feature/bc-utils"
-repository = "https://github.com/bug-or-feature/bc-utils"
+requires-python = ">=3.11,<4.0"
 keywords = ["trading"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -16,39 +17,40 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Cython",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
     "License :: OSI Approved :: BSD License",
 ]
-packages = [
-    { include = "bcutils" }
+dependencies = [
+    "requests>=2,<3",
+    "numpy<2",
+    "pandas<3",
+    "beautifulsoup4>=4,<5",
+    "pyyaml>=6.0.1,<7",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.8.1,<4.0"
-requests = "^2"
-numpy = "<2"
-pandas = "<3"
-beautifulsoup4 = "^4"
-pyyaml = "^6.0.1"
+[project.urls]
+Homepage = "https://github.com/bug-or-feature/bc-utils"
+Repository = "https://github.com/bug-or-feature/bc-utils"
+Issues = "https://github.com/bug-or-feature/bc-utils/issues"
 
-[tool.poetry.group.dev.dependencies]
-black = "^23.12.1"
-pytest = "^7"
-flake8 = "^6"
-
-[tool.poetry.urls]
-"Issues" = "https://github.com/bug-or-feature/bc-utils/issues"
+[dependency-groups]
+dev = [
+    "pytest>=7,<8",
+    "ruff>=0.8,<0.9",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.black]
+[tool.hatch.build.targets.wheel]
+packages = ["bcutils"]
+
+[tool.ruff]
 line-length = 88
-target-version = ['py310']
-required-version = '23.12.1'
+target-version = "py311"
+
+[tool.ruff.lint]
+extend-ignore = ["E203"]
