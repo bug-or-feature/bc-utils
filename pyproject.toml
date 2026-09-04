@@ -28,6 +28,9 @@ dependencies = [
     "pandas<3",
     "beautifulsoup4>=4,<5",
     "pyyaml>=6.0.1,<7",
+    "playwright>=1.62.0",
+    "python-dotenv>=1.2.3",
+    "humanization-playwright>=0.1.2",
 ]
 
 [project.urls]
