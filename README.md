@@ -1,6 +1,6 @@
 # bc-utils
 
-[Barchart.com](https://www.barchart.com) allows registered users to download historic futures contract prices in CSV format. Individual contracts must be downloaded separately, which is laborious and slow. This script automates the process for daily and hourly data.
+[Barchart.com](https://www.barchart.com) allows paid subscribers to download historic futures contract prices in CSV format. Individual contracts must be downloaded separately, which is laborious and slow. This script automates the process for daily and hourly data.
 
 ## Quickstart
 
@@ -44,8 +44,15 @@ Features:
 * the script skips contracts already downloaded
 * by default gets 120 days of data per contract, override possible per instrument
 * dry run mode to check setup
-* allows updates to previously downloaded files
-* you must be a registered user. Paid subscribers get 250 downloads a day, otherwise 5
+* you must have a Barchart subscription. Premier users get 250 downloads a day, Plus users get 5
+
+### Browser requirements
+
+`get_barchart_downloads()` and `save_prices_for_contract()` drive a real browser (via [patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python)) rather than making plain HTTP requests. Install the browser once with `patchright install chromium` (or `uv run patchright install chromium` in this repo).
+
+By default, the browser runs headed (`headless=False`). On a server or CI runner with no display, run under a virtual display such as Xvfb (e.g. `xvfb-run -a python your_script.py`), or pass `headless=True`.
+
+Login/session state persists across runs in `auth_dir` (defaults to `~/.bc_utils/auth`) so you don't have to log in again every run. Treat this directory like a browser profile - don't commit it or share it.
 
 ## For pysystemtrade users
 
@@ -71,7 +78,7 @@ EXCHANGES = {
 }
 ```
 
-That indicates that futures instruments with exchange **COMEX** have daily price data from 27 Feb 1978, and hourly from 4 May 2008. Those date attributes are [provided by Barchart](https://www.barchart.com/solutions/data/market), and turn out to be inaccurate. Previous versions of this library would waste valuable allowance by attempting to download data that was not there. Newer versions handle this much better. If you use this library to download prices that are not in the config file, please consider contributing with a PR.
+That indicates that futures instruments with exchange **COMEX** have daily price data from 27 Feb 1978, and hourly from 4 May 2008. Those date attributes are [provided by Barchart](https://www.barchart.com/solutions/data/market), and turn out to be inaccurate. If you use this library to download prices that are not in the config file, please consider contributing with a PR.
 
 3. Have a look at the sample snippets in `~bc-utils/sample/pst.py`. There are examples for use with an external config file. Use the sample config `~bc-utils/sample/private_config_sample.yaml`, copy and rename to the top level of the `~bc-utils` dir. Update with your credentials and save path etc
 
@@ -91,11 +98,12 @@ def download_with_pst_config():
     )
 ```
 
-4. add bc-utils to your crontab
+4. add bc-utils to your crontab. Since a headless server has no display, run under `xvfb-run` (see [Browser requirements](#browser-requirements) above):
 ```
-00 08 * * 1-7 . $HOME/.profile; cd ~/bc-utils; python3 bcutils/sample/pst.py >> $ECHO_PATH/barchart_download.txt 2>&1
+00 08 * * 1-7 . $HOME/.profile; cd ~/bc-utils; xvfb-run -a python3 bcutils/sample/pst.py >> $ECHO_PATH/barchart_download.txt 2>&1
 ```
-You could also add another entry to run the updater once a week.
+
+Note: `update_barchart_downloads()` (for updating previously-downloaded files) currently does not work.
 
 5. To import the prices into PST (_see below_):
 
@@ -110,10 +118,10 @@ from sysinit.futures.contract_prices_from_split_freq_csv_to_db import (
 BARCHART_CONFIG = ConfigCsvFuturesPrices(
     input_date_index_name="Time",
     input_skiprows=0,
-    input_skipfooter=0,
-    input_date_format="%Y-%m-%dT%H:%M:%S%z",
+    input_skipfooter=1,
+    input_date_format="%Y-%m-%d %H:%M",
     input_column_mapping=dict(
-        OPEN="Open", HIGH="High", LOW="Low", FINAL="Close", VOLUME="Volume"
+        OPEN="Open", HIGH="High", LOW="Low", FINAL="Latest", VOLUME="Volume"
     ),
 )
 
