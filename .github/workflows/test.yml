@@ -40,6 +40,10 @@ jobs:
       run: |
         uv run ruff check bcutils sample
 
+    - name: Type check with mypy
+      run: |
+        uv run mypy bcutils sample
+
     - name: Unit tests with pytest
       env:
         BARCHART_USERNAME: ${{ secrets.BARCHART_USERNAME }}

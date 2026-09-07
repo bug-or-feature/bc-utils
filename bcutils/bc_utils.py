@@ -9,6 +9,7 @@ import os.path
 import pytz
 import random
 import re
+import sys
 import traceback
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -20,10 +21,15 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from humanization import Humanization, HumanizationConfig
+from loguru import logger as _loguru_logger
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 from patchright.async_api import async_playwright
 
 from bcutils.config import CONTRACT_MAP, EXCHANGES
+
+# redirect humanization logging to stdout instead.
+_loguru_logger.remove()
+_loguru_logger.add(sys.stdout)
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +77,10 @@ BARCHART_URL = "https://www.barchart.com/"
 _DEFAULT_AUTH_DIR = Path.home() / ".bc_utils" / "auth"
 
 _HUMANIZATION_CONFIG = HumanizationConfig(
-    fast=False,
+    fast=True,
     humanize=True,
-    characters_per_minute=600,
-    backspace_cpm=600,
+    characters_per_minute=500,
+    backspace_cpm=400,
     timeout=10000,
     stealth_mode=True,
 )
@@ -111,7 +117,7 @@ def _disable_password_manager(user_data_dir: Path) -> None:
 
 
 async def _human_pause(human: Humanization, base_min: float, base_max: float) -> None:
-    """Wait a randomised duration, jittering base_min/base_max themselves each call"""
+    # wait a randomised duration, jittering base_min/base_max themselves each call
     jitter = random.uniform(0.6, 1.6)
     min_sec = base_min * jitter
     max_sec = max(min_sec + 0.1, base_max * jitter * random.uniform(1.0, 1.4))
@@ -245,8 +251,8 @@ def create_bc_session(config_obj: dict, do_login=True):
     return session
 
 
-def _normalize_downloaded_csv(save_path: str, res: Resolution) -> None:
-    """fix column names, date format, remove footer"""
+def _normalize_downloaded_csv(save_path: str, res: Resolution) -> int:
+    """fix column names, date format, remove footer; returns row count"""
     dateformat = "%Y-%m-%d" if res == Resolution.Day else "%Y-%m-%d %H:%M"
 
     df = pd.read_csv(save_path, skipfooter=1, engine="python")
@@ -257,6 +263,7 @@ def _normalize_downloaded_csv(save_path: str, res: Resolution) -> None:
     df = df[["Open", "High", "Low", "Close", "Volume"]]
 
     df.to_csv(save_path, date_format="%Y-%m-%dT%H:%M:%S%z")
+    return len(df)
 
 
 async def _save_prices_for_contract_async(
@@ -267,6 +274,8 @@ async def _save_prices_for_contract_async(
     end_date: datetime,
     dry_run: bool,
     allowance_slot: dict,
+    instr_config: dict = None,
+    insufficient_check_margin_days: int = 365,
 ):
     res = _get_resolution(save_path)
 
@@ -277,6 +286,14 @@ async def _save_prices_for_contract_async(
             f"({save_path}) - skipping"
         )
         return HistoricalDataResult.EXISTS
+
+    if instr_config is not None and _near_available_res_boundary(
+        res, start_date, instr_config, insufficient_check_margin_days
+    ):
+        logger.info(f"step: near availability boundary, checking '{contract}'")
+        if await _insufficient_data_async(human, contract, res):
+            logger.info(f"Insufficient {res.adj} data for '{contract}' - skipping")
+            return HistoricalDataResult.INSUFFICIENT
 
     logger.info(
         f"getting historic {res.adj} prices for contract '{contract}', "
@@ -345,7 +362,7 @@ async def _save_prices_for_contract_async(
         await _human_pause(human, 0.2, 0.5)
         await human.type_at(start_box, start_date.strftime("%m/%d/%Y"))
         await human.page.keyboard.press("Escape")
-        await _human_pause(human, 0.2, 1)
+        await _human_pause(human, 0.2, 0.5)
 
         # set end date
         logger.info(f"step: set end date ({end_date.strftime('%m/%d/%Y')})")
@@ -356,7 +373,7 @@ async def _save_prices_for_contract_async(
         await _human_pause(human, 0.2, 0.5)
         await human.type_at(end_box, end_date.strftime("%m/%d/%Y"))
         await human.page.keyboard.press("Escape")
-        await _human_pause(human, 0.2, 1)
+        await _human_pause(human, 0.2, 0.5)
 
         logger.info(f"step: click Download for '{contract}'")
         download_link = human.page.get_by_text("Download", exact=True).first
@@ -382,7 +399,12 @@ async def _save_prices_for_contract_async(
 
         logger.info(f"step: saving download to {save_path}")
         await download.save_as(save_path)
-        _normalize_downloaded_csv(save_path, res)
+        row_count = _normalize_downloaded_csv(save_path, res)
+        if row_count < 30:
+            os.remove(save_path)
+            logger.info(f"Insufficient {res.adj} data for '{contract}' - skipping")
+            return HistoricalDataResult.INSUFFICIENT
+
         logger.info(
             f"Finished getting Barchart historic {res.adj} prices for {contract}"
         )
@@ -400,7 +422,7 @@ async def _save_prices_for_contract_standalone_async(
     end_date: datetime,
     dry_run: bool,
     headless: bool,
-    auth_dir: str,
+    auth_dir: str = None,
 ):
     auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
     downloads_dir = Path(save_path).resolve().parent
@@ -412,7 +434,7 @@ async def _save_prices_for_contract_standalone_async(
         try:
             await _login_async(human, session.username, session.password)
 
-            allowance_slot = {}
+            allowance_slot: dict = {}
             human.page.on("response", _make_download_response_handler(allowance_slot))
 
             return await _save_prices_for_contract_async(
@@ -484,6 +506,7 @@ async def _get_barchart_downloads_async(
     default_day_count,
     headless,
     auth_dir,
+    insufficient_check_margin_days,
 ):
     if contract_map is None:
         contract_map = CONTRACT_MAP
@@ -507,7 +530,7 @@ async def _get_barchart_downloads_async(
         try:
             await _login_async(human, session.username, session.password)
 
-            allowance_slot = {}
+            allowance_slot: dict = {}
             human.page.on("response", _make_download_response_handler(allowance_slot))
 
             for contract in contract_list:
@@ -554,6 +577,8 @@ async def _get_barchart_downloads_async(
                         end_date,
                         dry_run,
                         allowance_slot,
+                        instr_config,
+                        insufficient_check_margin_days,
                     )
 
                     if result in [
@@ -588,6 +613,7 @@ def get_barchart_downloads(
     default_day_count: int = 400,
     headless: bool = False,
     auth_dir: str = None,
+    insufficient_check_margin_days: int = 365,
 ):
     """
     Run a download session, performing as many contract downloads as possible, given
@@ -613,6 +639,10 @@ def get_barchart_downloads(
             display (e.g. Xvfb) on headless servers. Defaults to False
         auth_dir: directory to persist the browser's login/session state across
             runs. Defaults to ~/.bc_utils/auth
+        insufficient_check_margin_days: contracts expiring within this many days of
+            the exchange's published tick_date/eod_date get a live insufficient-data
+            check before downloading, since those published limits are often
+            inaccurate
     """
     try:
         asyncio.run(
@@ -630,6 +660,7 @@ def get_barchart_downloads(
                 default_day_count,
                 headless,
                 auth_dir,
+                insufficient_check_margin_days,
             )
         )
     except Exception as e:  # skipcq broad by design
@@ -836,7 +867,7 @@ async def _update_barchart_contract_file_standalone_async(
     contract_id: str,
     res: Resolution,
     headless: bool,
-    auth_dir: str,
+    auth_dir: str = None,
 ):
     auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
     downloads_dir = Path(path)
@@ -890,12 +921,7 @@ def update_barchart_contract_file(
 
 
 def _historical_prices_predicate(resolution: Resolution):
-    """Build a page.expect_response() predicate matching the exact
-    queryeod.ashx / queryminutes.ashx GET the interactive-chart page's own
-    JS fires once its resolution is switched to daily/hourly - mirrors the
-    filter conditions from poc_get_df.py's handle_daily_json/
-    handle_hourly_json, picking the right one based on `resolution` (the POC
-    itself had a bug registering the daily handler for both branches)."""
+    # build a page.expect_response() predicate
     if resolution == Resolution.Day:
         url_prefix = BARCHART_URL + "proxies/timeseries/historical/queryeod.ashx"
         required = ("volume=contract", "data=daily")
@@ -973,6 +999,19 @@ async def _get_historical_prices_for_contract_async(
     except Exception as ex:
         logger.error(f"Problem getting historical data: {ex}")
         raise BCException from ex
+
+
+async def _insufficient_data_async(
+    human: Humanization, contract: str, resolution: Resolution
+) -> bool:
+    try:
+        df = await _get_historical_prices_for_contract_async(
+            human, contract, resolution
+        )
+        logger.info(f"step: got {len(df)} rows for '{contract}'")
+        return len(df) < 30
+    except Exception:  # skipcq broad by design
+        return True
 
 
 def _build_contract_list(start_year, end_year, instr_list=None, contract_map=None):
@@ -1065,6 +1104,19 @@ def _before_available_res(resolution, start_date, instr_config):
             return eod_date is not None and start_date < eod_date
     else:
         raise BCException(f"No exchange specified for {instr_config['code']}")
+
+
+def _near_available_res_boundary(resolution, start_date, instr_config, margin_days):
+    # Barchart's published limits are often inaccurate.
+    if "exchange" not in instr_config:
+        raise BCException(f"No exchange specified for {instr_config['code']}")
+    exch = instr_config["exchange"]
+    if exch not in EXCHANGES:
+        raise BCException(f"Missing exchange config for {exch}")
+    exch_config = EXCHANGES[exch]
+    limit_key = "tick_date" if resolution == Resolution.Hour else "eod_date"
+    limit_date = datetime.strptime(exch_config[limit_key], "%Y-%m-%d")
+    return start_date <= limit_date + timedelta(days=margin_days)
 
 
 def _get_overview(session, contract_id):
@@ -1249,9 +1301,9 @@ def _get_exchange_for_code(session, contract_code: str):
         if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, "html.parser")
             table = soup.find(name="div", attrs={"class": "commodity-profile"})
-            label = table.find(name="div", string="Exchange")
-            exchange_raw = label.next_sibling.next_sibling  # whitespace counts
-            exchange = exchange_raw.text.strip()
+            label = table.find(name="div", string="Exchange")  # type: ignore[union-attr]
+            exchange_raw = label.next_sibling.next_sibling  # type: ignore[union-attr]
+            exchange = exchange_raw.text.strip()  # type: ignore[union-attr]
             return exchange
         if resp.status_code == 404:
             print(f"Barchart page for {contract_code} not found")

@@ -40,6 +40,7 @@ Issues = "https://github.com/bug-or-feature/bc-utils/issues"
 
 [dependency-groups]
 dev = [
+    "mypy>=2.3.1",
     "pytest>=7,<8",
     "ruff>=0.8,<0.9",
 ]
@@ -57,3 +58,8 @@ target-version = "py311"
 
 [tool.ruff.lint]
 extend-ignore = ["E203"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+no_implicit_optional = false
