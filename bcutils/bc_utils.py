@@ -9,9 +9,7 @@ import os.path
 import pytz
 import random
 import re
-import time
 import traceback
-import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import cycle
@@ -247,6 +245,20 @@ def create_bc_session(config_obj: dict, do_login=True):
     return session
 
 
+def _normalize_downloaded_csv(save_path: str, res: Resolution) -> None:
+    """fix column names, date format, remove footer"""
+    dateformat = "%Y-%m-%d" if res == Resolution.Day else "%Y-%m-%d %H:%M"
+
+    df = pd.read_csv(save_path, skipfooter=1, engine="python")
+    df["Time"] = pd.to_datetime(df["Time"], format=dateformat)
+    df.set_index("Time", inplace=True)
+    df.index = df.index.tz_localize(tz="US/Central").tz_convert("UTC")
+    df = df.rename(columns={"Latest": "Close"})
+    df = df[["Open", "High", "Low", "Close", "Volume"]]
+
+    df.to_csv(save_path, date_format="%Y-%m-%dT%H:%M:%S%z")
+
+
 async def _save_prices_for_contract_async(
     human: Humanization,
     contract: str,
@@ -370,6 +382,7 @@ async def _save_prices_for_contract_async(
 
         logger.info(f"step: saving download to {save_path}")
         await download.save_as(save_path)
+        _normalize_downloaded_csv(save_path, res)
         logger.info(
             f"Finished getting Barchart historic {res.adj} prices for {contract}"
         )
@@ -624,74 +637,127 @@ def get_barchart_downloads(
         traceback.print_exc()
 
 
-# def update_barchart_downloads(
-#     instr_code: str = "GOLD",
-#     contract_map: dict = None,
-#     save_dir: str = None,
-#     days_ago: int = 360,
-#     dry_run: bool = False,
-#     split_freq: bool = True,
-# ):
-#     """
-#     Update recent previously downloaded files for an instrument.
-#
-#     Considers previously downloaded contract files where the contract date is more
-#     recent than `days_ago`. For each file, will update it with any new price data rows,
-#     given the existing resolution.
-#
-#     Args:
-#         instr_code: instrument code (eg GOLD)
-#         contract_map: dict containing instrument config
-#         save_dir: full path to the directory where previously downloaded files are
-#             located
-#         days_ago: how many days to look back. A file's contract date is assumed to be
-#             the 1st of the month. So GCH23 would be 1st March 2023
-#         dry_run: if True, provides useful diagnostic info but does not execute
-#         split_freq: True if we are expecting to find split frequency files
-#     """
-#     if contract_map is None:
-#         contract_map = CONTRACT_MAP
-#
-#     from_date = datetime.now() - timedelta(days=days_ago)
-#
-#     logger.info(f"Updating contract prices for {instr_code}")
-#
-#     session = requests.Session()
-#     session.headers.update({"User-Agent": "Mozilla/5.0"})
-#
-#     check_integrity_list = []
-#
-#     file_names = _get_filenames(instr_code, save_dir, split_freq)
-#
-#     for file in file_names:
-#         instr_code = _instr_code_from_file_name(file, split_freq=split_freq)
-#         if split_freq:
-#             res = _res_from_file_name(file)
-#         else:
-#             res = None
-#         contract_date = _contract_date_from_file_name(file)
-#         contract_id = _get_barchart_id(
-#             instr_code, contract_date.year, contract_date.month
-#         )
-#
-#         if contract_date > from_date:
-#             if dry_run:
-#                 print(f"DRY RUN: would update contract {contract_id}, file {file}")
-#             else:
-#                 try:
-#                     update_barchart_contract_file(
-#                         session, contract_map, save_dir, contract_id, res
-#                     )
-#                 except IntegrityException:
-#                     logger.error(f"File index problem with {file}, please check")
-#                     check_integrity_list.append(file)
-#                 except RecentUpdateException:
-#                     logger.warning(f"Skipping {contract_id}, recently updated")
-#                 except EmptyDataException:
-#                     logger.info(f"Empty data for {contract_id}")
-#
-#     if len(check_integrity_list) > 0:
-#         print(f"These files have integrity problems: {check_integrity_list}")
+async def _update_barchart_downloads_async(
+    instr_code,
+    contract_map,
+    save_dir,
+    days_ago,
+    dry_run,
+    split_freq,
+    session: BarchartSession,
+    headless,
+    auth_dir,
+):
+    if contract_map is None:
+        contract_map = CONTRACT_MAP
+
+    from_date = datetime.now() - timedelta(days=days_ago)
+
+    logger.info(f"Updating contract prices for {instr_code}")
+
+    check_integrity_list = []
+
+    file_names = _get_filenames(instr_code, save_dir, split_freq)
+
+    auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
+    downloads_dir = Path(save_dir) if save_dir else Path(os.getcwd())
+
+    async with async_playwright() as playwright:
+        context, human = await _launch_barchart_browser(
+            playwright, auth_dir_path, downloads_dir, headless
+        )
+        try:
+            await _login_async(human, session.username, session.password)
+
+            for file in file_names:
+                instr_code = _instr_code_from_file_name(file, split_freq=split_freq)
+                if split_freq:
+                    res = _res_from_file_name(file)
+                else:
+                    res = None
+                contract_date = _contract_date_from_file_name(file)
+                contract_id = _get_barchart_id(
+                    instr_code, contract_date.year, contract_date.month
+                )
+
+                if contract_date > from_date:
+                    if dry_run:
+                        print(
+                            f"DRY RUN: would update contract {contract_id}, "
+                            f"file {file}"
+                        )
+                    else:
+                        try:
+                            await _update_barchart_contract_file_async(
+                                human, contract_map, save_dir, contract_id, res
+                            )
+                        except IntegrityException:
+                            logger.error(
+                                f"File index problem with {file}, please check"
+                            )
+                            check_integrity_list.append(file)
+                        except RecentUpdateException:
+                            logger.warning(f"Skipping {contract_id}, recently updated")
+                        except EmptyDataException:
+                            logger.info(f"Empty data for {contract_id}")
+        finally:
+            await context.close()
+
+    if len(check_integrity_list) > 0:
+        print(f"These files have integrity problems: {check_integrity_list}")
+
+
+def update_barchart_downloads(
+    instr_code: str = "GOLD",
+    contract_map: dict = None,
+    save_dir: str = None,
+    days_ago: int = 360,
+    dry_run: bool = False,
+    split_freq: bool = True,
+    session: BarchartSession = None,
+    headless: bool = False,
+    auth_dir: str = None,
+):
+    """
+    Update recent previously downloaded files for an instrument.
+
+    Considers previously downloaded contract files where the contract date is more
+    recent than `days_ago`. For each file, will update it with any new price data rows,
+    given the existing resolution.
+
+    Args:
+        instr_code: instrument code (eg GOLD)
+        contract_map: dict containing instrument config
+        save_dir: full path to the directory where previously downloaded files are
+            located
+        days_ago: how many days to look back. A file's contract date is assumed to be
+            the 1st of the month. So GCH23 would be 1st March 2023
+        dry_run: if True, provides useful diagnostic info but does not execute
+        split_freq: True if we are expecting to find split frequency files
+        session: a BarchartSession instance from create_bc_session(). If not
+            provided, one is built from BARCHART_USERNAME/BARCHART_PASSWORD
+            environment variables
+        headless: if True, run the browser without a visible window. Requires a
+            display (e.g. Xvfb) on headless servers. Defaults to False
+        auth_dir: directory to persist the browser's login/session state across
+            runs. Defaults to ~/.bc_utils/auth
+    """
+    if session is None:
+        session = create_bc_session(config_obj=_env())
+
+    asyncio.run(
+        _update_barchart_downloads_async(
+            instr_code,
+            contract_map,
+            save_dir,
+            days_ago,
+            dry_run,
+            split_freq,
+            session,
+            headless,
+            auth_dir,
+        )
+    )
 
 
 def _get_filenames(instr_code, save_dir, split_freq: bool = True):
@@ -707,28 +773,13 @@ def _get_filenames(instr_code, save_dir, split_freq: bool = True):
     return file_names
 
 
-def update_barchart_contract_file(
-    session: requests.Session,
+async def _update_barchart_contract_file_async(
+    human: Humanization,
     contract_map: dict,
     path: str,
     contract_id: str,
     res: Resolution,
 ):
-    """
-    Update a previously downloaded contract price file.
-
-    Args:
-        session: requests.Session instance
-        contract_map: dict containing instrument config
-        path: full path to the directory where previously downloaded files are located
-        contract_id: Barchart style contract identifier, eg GCH24 for March 2024 Gold
-        res: Resolution.Hour or Resolution.Day
-    Raises:
-        IntegrityException: raised if a problem is encountered when trying to set the
-            datetime column as index
-        RecentUpdateException: raised if the file has been recently updated
-        EmptyDataException: raised if the update contains no data
-    """
     inv_contract_map = _build_inverse_map(contract_map)
 
     file = _filename_from_barchart_id(contract_id, inv_contract_map, res)
@@ -755,7 +806,7 @@ def update_barchart_contract_file(
         f"last entry: {last_index_date}"
     )
 
-    update = get_historical_prices_for_contract(session, contract_id, res)
+    update = await _get_historical_prices_for_contract_async(human, contract_id, res)
     if res == Resolution.Hour:
         start = last_index_date + timedelta(hours=1)
     else:
@@ -778,67 +829,142 @@ def update_barchart_contract_file(
         raise EmptyDataException(f"Empty data for {contract_id}")
 
 
-def get_historical_prices_for_contract(
-    session, instr_code: str, resolution: Resolution = Resolution.Day
+async def _update_barchart_contract_file_standalone_async(
+    session: BarchartSession,
+    contract_map: dict,
+    path: str,
+    contract_id: str,
+    res: Resolution,
+    headless: bool,
+    auth_dir: str,
+):
+    auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
+    downloads_dir = Path(path)
+
+    async with async_playwright() as playwright:
+        context, human = await _launch_barchart_browser(
+            playwright, auth_dir_path, downloads_dir, headless
+        )
+        try:
+            await _login_async(human, session.username, session.password)
+            return await _update_barchart_contract_file_async(
+                human, contract_map, path, contract_id, res
+            )
+        finally:
+            await context.close()
+
+
+def update_barchart_contract_file(
+    session: BarchartSession,
+    contract_map: dict,
+    path: str,
+    contract_id: str,
+    res: Resolution,
+    headless: bool = False,
+    auth_dir: str = None,
+):
+    """
+    Update a previously downloaded contract price file.
+
+    Args:
+        session: a BarchartSession instance
+        contract_map: dict containing instrument config
+        path: full path to the directory where previously downloaded files are located
+        contract_id: Barchart style contract identifier, eg GCH24 for March 2024 Gold
+        res: Resolution.Hour or Resolution.Day
+        headless: if True, run the browser without a visible window. Requires a
+            display (e.g. Xvfb) on headless servers. Defaults to False
+        auth_dir: directory to persist the browser's login/session state across
+            runs. Defaults to ~/.bc_utils/auth
+    Raises:
+        IntegrityException: raised if a problem is encountered when trying to set the
+            datetime column as index
+        RecentUpdateException: raised if the file has been recently updated
+        EmptyDataException: raised if the update contains no data
+    """
+    return asyncio.run(
+        _update_barchart_contract_file_standalone_async(
+            session, contract_map, path, contract_id, res, headless, auth_dir
+        )
+    )
+
+
+def _historical_prices_predicate(resolution: Resolution):
+    """Build a page.expect_response() predicate matching the exact
+    queryeod.ashx / queryminutes.ashx GET the interactive-chart page's own
+    JS fires once its resolution is switched to daily/hourly - mirrors the
+    filter conditions from poc_get_df.py's handle_daily_json/
+    handle_hourly_json, picking the right one based on `resolution` (the POC
+    itself had a bug registering the daily handler for both branches)."""
+    if resolution == Resolution.Day:
+        url_prefix = BARCHART_URL + "proxies/timeseries/historical/queryeod.ashx"
+        required = ("volume=contract", "data=daily")
+    else:
+        url_prefix = BARCHART_URL + "proxies/timeseries/historical/queryminutes.ashx"
+        required = ("volume=contract", "interval=60")
+
+    def predicate(response) -> bool:
+        return (
+            response.request.method == "GET"
+            and response.request.url.startswith(url_prefix)
+            and all(token in response.request.url for token in required)
+        )
+
+    return predicate
+
+
+async def _get_historical_prices_for_contract_async(
+    human: Humanization, contract_id: str, resolution: Resolution = Resolution.Day
 ) -> pd.DataFrame:
-    if not instr_code:
-        raise BCException("instr_code is required")
+    if not contract_id:
+        raise BCException("contract_id is required")
 
     try:
-        # GET the futures quote chart page, scrape to get XSRF token
-        # https://www.barchart.com/futures/quotes/GCM21/interactive-chart
-        chart_url = BARCHART_URL + f"futures/quotes/{instr_code}/interactive-chart"
-        chart_resp = session.get(chart_url)
-        xsrf = urllib.parse.unquote(chart_resp.cookies["XSRF-TOKEN"])
+        chart_url = f"{BARCHART_URL}futures/quotes/{contract_id}/interactive-chart"
+        resolution_label = "Daily" if resolution == Resolution.Day else "1 Hour"
+        predicate = _historical_prices_predicate(resolution)
 
-        headers = {
-            "content-type": "text/plain; charset=UTF-8",
-            "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Referer": chart_url,
-            "x-xsrf-token": xsrf,
-        }
+        logger.info(f"step: goto interactive-chart page for {contract_id}")
+        async with human.page.expect_response(
+            predicate, timeout=20000
+        ) as response_info:
+            await human.page.goto(chart_url)
+            await _human_pause(human, 1, 3)
 
-        payload = {
-            "symbol": instr_code,
-            "maxrecords": "640",
-            "volume": "contract",
-            "order": "asc",
-            "dividends": "false",
-            "backadjust": "false",
-            "daystoexpiration": "1",
-            "contractroll": "combined",
-        }
+            logger.info("step: click Max")
+            await human.page.get_by_role("button", name="Max").click()
+            await _human_pause(human, 0.2, 0.5)
 
-        if resolution == Resolution.Day:
-            data_url = BARCHART_URL + "proxies/timeseries/historical/queryeod.ashx"
-            payload["data"] = "daily"
-        else:
-            data_url = BARCHART_URL + "proxies/timeseries/historical/queryminutes.ashx"
-            payload["interval"] = "60"
-
-        # get prices for instrument from BC internal API
-        prices_resp = session.get(data_url, headers=headers, params=payload)
-        if prices_resp.status_code != 200:
-            raise Exception(
-                f"response status: {prices_resp.status_code} {prices_resp.reason}"
+            logger.info(f"step: switch chart resolution to {resolution_label}")
+            await human.page.locator("text-binding").nth(1).click()
+            await _human_pause(human, 0.2, 0.5)
+            await (
+                human.page.locator("text-binding")
+                .filter(has_text=re.compile(rf"^{re.escape(resolution_label)}$"))
+                .click()
             )
-        ratelimit = prices_resp.headers["x-ratelimit-remaining"]
-        if int(ratelimit) <= 15:
-            time.sleep(20)
+        response = await response_info.value
+
+        ratelimit = response.headers.get("x-ratelimit-remaining")
+        if ratelimit is not None and int(ratelimit) <= 15:
+            await asyncio.sleep(20)
         logger.info(
-            f"GET {data_url} {instr_code}, {prices_resp.status_code}, "
+            f"GET {response.url} {contract_id}, {response.status}, "
             f"ratelimit {ratelimit}"
         )
 
         # read response into dataframe
-        iostr = io.StringIO(prices_resp.text)
+        text = await response.text()
+        iostr = io.StringIO(text)
         df = pd.read_csv(iostr, header=None)
 
         # convert to expected format
         price_data_as_df = _raw_barchart_data_to_df(df, bar_freq=resolution)
 
         if len(df) == 0:
-            raise BCException(f"Zero length Barchart price data found for {instr_code}")
+            raise BCException(
+                f"Zero length Barchart price data found for {contract_id}"
+            )
 
         logger.debug(f"Latest price {df.index[-1]} with {resolution}")
 

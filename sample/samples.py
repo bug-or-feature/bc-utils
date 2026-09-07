@@ -5,6 +5,8 @@ from bcutils.bc_utils import (
     create_bc_session,
     get_barchart_downloads,
     save_prices_for_contract,
+    update_barchart_downloads,
+    update_barchart_contract_file,
     Resolution,
     _build_save_path,
     _get_contract_month_year,
@@ -97,6 +99,41 @@ def save_daily(instr_code, contract_key):
     print(f"Result: {result}")
 
 
+def update_downloads():
+    # update any hourly or daily AUD price files in the current working directory
+    update_barchart_downloads(
+        instr_code="AUD",
+        contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}},
+        save_dir="/Users/ageach/Dev/work/bc-utils/dl_test",
+        dry_run=False,
+        days_ago=100000,
+    )
+
+
+def update_hourly_file():
+    # update the hourly AUD Mar 2024 price file in the current working directory
+    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
+    update_barchart_contract_file(
+        session=create_bc_session(config_obj=_env()),
+        contract_map=contract_map,
+        path=os.getcwd(),
+        contract_id="A6H24",
+        res=Resolution.Hour,
+    )
+
+
+def update_daily_file():
+    # update the daily AUD Mar 2024 price file in the current working directory
+    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
+    update_barchart_contract_file(
+        session=create_bc_session(config_obj=_env()),
+        contract_map=contract_map,
+        path=os.getcwd(),
+        contract_id="A6H24",
+        res=Resolution.Day,
+    )
+
+
 def rename_files_with_new_format():
     # search the given directory for any price files with the old name format
     # (AUD_20230300.csv), and analyse the prices inside, renaming with the new format
@@ -115,4 +152,7 @@ if __name__ == "__main__":
     # save_hourly("AUD", "A6H20")
     # save_daily("AUD", "A6H20")
     # save_hourly("CHFJPY", "UPU14")
+    # update_downloads()
+    # update_hourly_file()
+    # update_daily_file()
     # rename_files_with_new_format()

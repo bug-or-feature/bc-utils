@@ -38,3 +38,8 @@ inc/
 /.env
 /.venv
 /data
+auth.json
+/downloads
+/humanization.log
+/bcutils/humanization.log
+/.claude
