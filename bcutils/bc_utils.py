@@ -18,7 +18,6 @@ from pathlib import Path
 from random import randint
 
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
 from humanization import Humanization, HumanizationConfig
 from loguru import logger as _loguru_logger
@@ -116,7 +115,9 @@ def _disable_password_manager(user_data_dir: Path) -> None:
     prefs_path.write_text(json.dumps(prefs))
 
 
-async def _human_pause(human: Humanization, base_min: float, base_max: float) -> None:
+async def _pause(
+    human: Humanization, base_min: float = 0.2, base_max: float = 1.0
+) -> None:
     # wait a randomised duration, jittering base_min/base_max themselves each call
     jitter = random.uniform(0.6, 1.6)
     min_sec = base_min * jitter
@@ -168,15 +169,15 @@ async def _launch_barchart_browser(
 async def _login_async(human: Humanization, username: str, password: str) -> None:
     logger.info("step: goto barchart.com")
     await human.page.goto(BARCHART_URL)
-    await _human_pause(human, 0.5, 1.5)
+    await _pause(human)
 
     allow_all = human.page.get_by_role("button", name="Allow all")
     if await allow_all.count() > 0:
         logger.info("step: accept cookie banner")
         await human.hover_at(allow_all)
-        await _human_pause(human, 0.3, 1)
+        await _pause(human)
         await human.click_at(allow_all)
-        await _human_pause(human, 0.5, 1.5)
+        await _pause(human)
     else:
         logger.info("step: cookie banner not present, skipping")
 
@@ -184,9 +185,9 @@ async def _login_async(human: Humanization, username: str, password: str) -> Non
     if await login_link.count() > 0:
         logger.info("step: click LOGIN link")
         await human.hover_at(login_link)
-        await _human_pause(human, 0.3, 1)
+        await _pause(human)
         await human.click_at(login_link)
-        await _human_pause(human, 0.5, 1.5)
+        await _pause(human)
     else:
         logger.info("step: LOGIN link not present, skipping")
 
@@ -194,21 +195,21 @@ async def _login_async(human: Humanization, username: str, password: str) -> Non
     if await email_box.count() > 0:
         logger.info("step: fill email")
         await human.type_at(email_box, username)
-        await _human_pause(human, 0.5, 1)
+        await _pause(human)
 
     password_box = human.page.get_by_role("textbox", name="Password")
     if await password_box.count() > 0:
         logger.info("step: fill password")
         await human.type_at(password_box, password)
-        await _human_pause(human, 0.2, 1.2)
+        await _pause(human)
 
     login_button = human.page.get_by_role("button", name="Login")
     if await login_button.count() > 0:
         logger.info("step: submit login")
         await human.hover_at(login_button)
-        await _human_pause(human, 0.3, 0.9)
+        await _pause(human)
         await human.click_at(login_button)
-        await _human_pause(human, 1, 2)
+        await _pause(human)
 
     # if the email field is still there after an attempted submit, login
     # didn't take - matches the old code's BCException on a failed login
@@ -216,39 +217,22 @@ async def _login_async(human: Humanization, username: str, password: str) -> Non
         raise BCException("Invalid credentials")
 
 
-def create_bc_session(config_obj: dict, do_login=True):
+def create_bc_session(config_obj: dict) -> BarchartSession:
     """
-    Create and return a Barchart session
-
+    Validate credentials and return a BarchartSession.
     Args:
         config_obj: dict containing Barchart credentials
-        do_login: if True, validate credentials are present and return a
-            BarchartSession that get_barchart_downloads() / save_prices_for_contract()
-            will use to log in (lazily, via a real browser) when they run. If False,
-            returns a plain anonymous requests.Session for the unauthenticated
-            helpers that still use plain HTTP.
-
     Returns:
-        A BarchartSession instance if do_login is True, else a requests.Session
-        instance
-
+        A BarchartSession instance
     Raises:
-        BCException: if do_login is True and credentials are missing
+        BCException: if credentials are missing
     """
-    if do_login is True:
-        if (
-            "barchart_username" not in config_obj
-            or "barchart_password" not in config_obj
-        ):
-            raise BCException("Missing credentials")
-        return BarchartSession(
-            username=config_obj["barchart_username"],
-            password=config_obj["barchart_password"],
-        )
-
-    session = requests.Session()
-    session.headers.update({"User-Agent": "Mozilla/5.0"})
-    return session
+    if "barchart_username" not in config_obj or "barchart_password" not in config_obj:
+        raise BCException("Missing credentials")
+    return BarchartSession(
+        username=config_obj["barchart_username"],
+        password=config_obj["barchart_password"],
+    )
 
 
 def _normalize_downloaded_csv(save_path: str, res: Resolution) -> int:
@@ -274,7 +258,7 @@ async def _save_prices_for_contract_async(
     end_date: datetime,
     dry_run: bool,
     allowance_slot: dict,
-    instr_config: dict = None,
+    instr_config: dict | None = None,
     insufficient_check_margin_days: int = 365,
 ):
     res = _get_resolution(save_path)
@@ -310,7 +294,7 @@ async def _save_prices_for_contract_async(
             return HistoricalDataResult.NONE
 
         # give the page's own JS time to finish hydrating
-        await _human_pause(human, 1, 3)
+        await _pause(human)
 
         if dry_run:
             logger.info(f"Not downloading {contract}, dry_run")
@@ -324,7 +308,7 @@ async def _save_prices_for_contract_async(
         max_attempts = 3
         for attempt in range(max_attempts):
             await frequency_select.select_option(select_value)
-            await _human_pause(human, 0.5, 1.5)
+            await _pause(human)
             actual_value = await frequency_select.input_value()
             if actual_value == select_value:
                 break
@@ -347,33 +331,33 @@ async def _save_prices_for_contract_async(
             )
             await minutes_box.fill("")
             await human.type_at(minutes_box, "60")
-            await _human_pause(human, 0.2, 1)
+            await _pause(human)
 
         logger.info("step: select ordering (asc)")
         await human.page.get_by_label("Select Ordering").select_option("asc")
-        await _human_pause(human, 0.2, 1)
+        await _pause(human)
 
         # set start date
         logger.info(f"step: set start date ({start_date.strftime('%m/%d/%Y')})")
         start_box = human.page.get_by_role("textbox", name="Start Date")
         await start_box.click()
-        await _human_pause(human, 0.2, 0.5)
+        await _pause(human)
         await human.page.get_by_role("button", name="Clear").click()
-        await _human_pause(human, 0.2, 0.5)
+        await _pause(human)
         await human.type_at(start_box, start_date.strftime("%m/%d/%Y"))
         await human.page.keyboard.press("Escape")
-        await _human_pause(human, 0.2, 0.5)
+        await _pause(human)
 
         # set end date
         logger.info(f"step: set end date ({end_date.strftime('%m/%d/%Y')})")
         end_box = human.page.get_by_role("textbox", name="End Date")
         await end_box.click()
-        await _human_pause(human, 0.2, 0.5)
+        await _pause(human)
         await human.page.get_by_role("button", name="Clear").click()
-        await _human_pause(human, 0.2, 0.5)
+        await _pause(human)
         await human.type_at(end_box, end_date.strftime("%m/%d/%Y"))
         await human.page.keyboard.press("Escape")
-        await _human_pause(human, 0.2, 0.5)
+        await _pause(human)
 
         logger.info(f"step: click Download for '{contract}'")
         download_link = human.page.get_by_text("Download", exact=True).first
@@ -422,7 +406,7 @@ async def _save_prices_for_contract_standalone_async(
     end_date: datetime,
     dry_run: bool,
     headless: bool,
-    auth_dir: str = None,
+    auth_dir: str | None = None,
 ):
     auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
     downloads_dir = Path(save_path).resolve().parent
@@ -458,7 +442,7 @@ def save_prices_for_contract(
     end_date: datetime,
     dry_run: bool = False,
     headless: bool = False,
-    auth_dir: str = None,
+    auth_dir: str | None = None,
 ):
     """
     Save prices for an individual futures contract.
@@ -601,10 +585,10 @@ async def _get_barchart_downloads_async(
 
 def get_barchart_downloads(
     session: BarchartSession,
-    contract_map: dict = None,
-    contract_list: list = None,
-    instr_list: list = None,
-    save_dir: str = None,
+    contract_map: dict | None = None,
+    contract_list: list | None = None,
+    instr_list: list | None = None,
+    save_dir: str | None = None,
     start_year: int = 1950,
     end_year: int = 2025,
     dry_run: bool = False,
@@ -612,7 +596,7 @@ def get_barchart_downloads(
     pause_between_downloads: bool = True,
     default_day_count: int = 400,
     headless: bool = False,
-    auth_dir: str = None,
+    auth_dir: str | None = None,
     insufficient_check_margin_days: int = 365,
 ):
     """
@@ -740,14 +724,14 @@ async def _update_barchart_downloads_async(
 
 def update_barchart_downloads(
     instr_code: str = "GOLD",
-    contract_map: dict = None,
-    save_dir: str = None,
+    contract_map: dict | None = None,
+    save_dir: str | None = None,
     days_ago: int = 360,
     dry_run: bool = False,
     split_freq: bool = True,
-    session: BarchartSession = None,
+    session: BarchartSession | None = None,
     headless: bool = False,
-    auth_dir: str = None,
+    auth_dir: str | None = None,
 ):
     """
     Update recent previously downloaded files for an instrument.
@@ -867,7 +851,7 @@ async def _update_barchart_contract_file_standalone_async(
     contract_id: str,
     res: Resolution,
     headless: bool,
-    auth_dir: str = None,
+    auth_dir: str | None = None,
 ):
     auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
     downloads_dir = Path(path)
@@ -892,7 +876,7 @@ def update_barchart_contract_file(
     contract_id: str,
     res: Resolution,
     headless: bool = False,
-    auth_dir: str = None,
+    auth_dir: str | None = None,
 ):
     """
     Update a previously downloaded contract price file.
@@ -955,15 +939,15 @@ async def _get_historical_prices_for_contract_async(
             predicate, timeout=20000
         ) as response_info:
             await human.page.goto(chart_url)
-            await _human_pause(human, 1, 3)
+            await _pause(human)
 
             logger.info("step: click Max")
             await human.page.get_by_role("button", name="Max").click()
-            await _human_pause(human, 0.2, 0.5)
+            await _pause(human)
 
             logger.info(f"step: switch chart resolution to {resolution_label}")
             await human.page.locator("text-binding").nth(1).click()
-            await _human_pause(human, 0.2, 0.5)
+            await _pause(human)
             await (
                 human.page.locator("text-binding")
                 .filter(has_text=re.compile(rf"^{re.escape(resolution_label)}$"))
@@ -1119,21 +1103,6 @@ def _near_available_res_boundary(resolution, start_date, instr_config, margin_da
     return start_date <= limit_date + timedelta(days=margin_days)
 
 
-def _get_overview(session, contract_id):
-    """
-    GET the futures overview page, e.g.
-        https://www.barchart.com/futures/quotes/B6M21/overview
-    :param contract_id: contract identifier
-    :type contract_id: str
-    :return: resp
-    :rtype: HTTP response object
-    """
-    url = BARCHART_URL + "futures/quotes/%s/overview" % contract_id
-    resp = session.get(url)
-    logger.debug(f"GET {url}, response {resp.status_code}")
-    return resp
-
-
 def _build_save_path(instr_code, month, year, res: Resolution, save_directory):
     if save_directory is None:
         download_dir = os.getcwd()
@@ -1262,7 +1231,7 @@ def _contract_date_from_file_name(file_name):
     return contract_date
 
 
-def _filename_from_barchart_id(contract_id, inv_map, res: Resolution):
+def _filename_from_barchart_id(contract_id, inv_map, res: Resolution | None):
     try:
         month, year = _get_contract_month_year(contract_id)
         market_code = contract_id[: len(contract_id) - 3]
@@ -1288,29 +1257,61 @@ def _env():
     return barchart_config
 
 
-def _get_exchange_for_code(session, contract_code: str):
-    """
-    Get the exchange for the given Barchart code
-
-    Scrapes the info page for the given contract to grab the exchange
-    :param contract_code:
-    :return: str
-    """
+async def _get_exchange_for_code_async(human: Humanization, contract_code: str):
+    # scrape the overview page info table for the exchange name
     try:
-        resp = _get_overview(session, contract_code)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, "html.parser")
+        url = f"{BARCHART_URL}futures/quotes/{contract_code}/overview"
+        response = await human.page.goto(url)
+        if response is None:
+            return None
+        if response.status == 200:
+            html = await response.text()
+            soup = BeautifulSoup(html, "html.parser")
             table = soup.find(name="div", attrs={"class": "commodity-profile"})
             label = table.find(name="div", string="Exchange")  # type: ignore[union-attr]
             exchange_raw = label.next_sibling.next_sibling  # type: ignore[union-attr]
             exchange = exchange_raw.text.strip()  # type: ignore[union-attr]
             return exchange
-        if resp.status_code == 404:
+        if response.status == 404:
             print(f"Barchart page for {contract_code} not found")
 
     except Exception as e:
         print("Error: %s" % e)
         return None
+
+
+async def _get_exchange_for_code_standalone_async(
+    session: BarchartSession,
+    contract_code: str,
+    headless: bool = False,
+    auth_dir: str | None = None,
+):
+    auth_dir_path = Path(auth_dir) if auth_dir else _DEFAULT_AUTH_DIR
+    downloads_dir = _DEFAULT_AUTH_DIR.parent / "downloads"
+
+    async with async_playwright() as playwright:
+        context, human = await _launch_barchart_browser(
+            playwright, auth_dir_path, downloads_dir, headless
+        )
+        try:
+            await _login_async(human, session.username, session.password)
+            return await _get_exchange_for_code_async(human, contract_code)
+        finally:
+            await context.close()
+
+
+def _get_exchange_for_code(
+    session: BarchartSession,
+    contract_code: str,
+    headless: bool = False,
+    auth_dir: str | None = None,
+):
+    """Get the exchange for the given Barchart code."""
+    return asyncio.run(
+        _get_exchange_for_code_standalone_async(
+            session, contract_code, headless, auth_dir
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -38,29 +38,7 @@ class TestDownloader:
                 contract_map={
                     "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}
                 },
-                save_dir=download_dir,
-                start_year=2020,
-                end_year=2022,
-                dry_run=False,
-            )
-
-    @pytest.mark.skip(
-        reason="create_bc_session() no longer performs a synchronous login "
-        "attempt; login now happens lazily inside get_barchart_downloads()"
-    )
-    def test_bad_credentials(self, download_dir):
-        with pytest.raises(Exception):
-            get_barchart_downloads(
-                create_bc_session(
-                    config_obj=dict(
-                        barchart_username="user@domain.com",
-                        barchart_password="s3cr3t_321",
-                    )
-                ),
-                contract_map={
-                    "AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}
-                },
-                save_dir=download_dir,
+                save_dir=str(download_dir.absolute()),
                 start_year=2020,
                 end_year=2022,
                 dry_run=False,
@@ -74,7 +52,7 @@ class TestDownloader:
             get_barchart_downloads(
                 create_bc_session(config_obj=bc_config),
                 contract_map={"AUD": {"code": "A6", "cycle": "H", "exchange": "CME"}},
-                save_dir=download_dir,
+                save_dir=str(download_dir),
                 start_year=2020,
                 end_year=2021,
                 dry_run=False,
@@ -92,7 +70,7 @@ class TestDownloader:
             get_barchart_downloads(
                 create_bc_session(config_obj=bc_config),
                 contract_map={"AUD": {"code": "A6", "cycle": "H", "exchange": "CME"}},
-                save_dir=download_dir,
+                save_dir=str(download_dir),
                 start_year=2020,
                 end_year=2021,
                 do_daily=True,
@@ -104,7 +82,6 @@ class TestDownloader:
             assert csv.exists()
             assert not csv.is_dir()
 
-    @pytest.mark.skip(reason="INSUFFICIENT pre-check removed")
     def test_insufficient(self, bc_config, download_dir):
         if not self._have_creds(bc_config):
             pytest.skip("Skipping test, no Barchart credentials found in env")
@@ -117,7 +94,7 @@ class TestDownloader:
             start_date, end_date = _get_start_end_dates(month, year)
 
             result = save_prices_for_contract(
-                create_bc_session(config_obj=bc_config, do_login=False),
+                create_bc_session(config_obj=bc_config),
                 contract_key,
                 save_path,
                 start_date,

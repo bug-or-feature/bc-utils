@@ -96,11 +96,8 @@ class TestUtils:
                 {"code": "ABC", "cycle": "HMUZ"},
             )
 
-    @pytest.mark.skip(reason="not working with playwright")
     def test_get_exchange(self):
-        exch = _get_exchange_for_code(
-            create_bc_session(config_obj=_env(), do_login=False), "GCF24"
-        )
+        exch = _get_exchange_for_code(create_bc_session(config_obj=_env()), "GCF24")
         assert exch == "COMEX"
 
     def test_get_instr_code_from_file_name_split(self):

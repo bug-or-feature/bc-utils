@@ -40,6 +40,5 @@ inc/
 /data
 auth.json
 /downloads
-/humanization.log
-/bcutils/humanization.log
+humanization.log
 /.claude
