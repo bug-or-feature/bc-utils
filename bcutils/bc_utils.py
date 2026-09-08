@@ -211,8 +211,7 @@ async def _login_async(human: Humanization, username: str, password: str) -> Non
         await human.click_at(login_button)
         await _pause(human)
 
-    # if the email field is still there after an attempted submit, login
-    # didn't take - matches the old code's BCException on a failed login
+    # if email field is still there after attempted login, it failed
     if await email_box.count() > 0:
         raise BCException("Invalid credentials")
 

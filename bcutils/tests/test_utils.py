@@ -4,15 +4,12 @@ from datetime import datetime
 from bcutils.bc_utils import (
     Resolution,
     CONTRACT_MAP,
-    create_bc_session,
     BCException,
     _build_save_path,
-    _env,
     _get_resolution,
     _filename_from_barchart_id,
     _build_inverse_map,
     _before_available_res,
-    _get_exchange_for_code,
     _instr_code_from_file_name,
     _res_from_file_name,
 )
@@ -95,10 +92,6 @@ class TestUtils:
                 datetime(2007, 1, 1),
                 {"code": "ABC", "cycle": "HMUZ"},
             )
-
-    def test_get_exchange(self):
-        exch = _get_exchange_for_code(create_bc_session(config_obj=_env()), "GCF24")
-        assert exch == "COMEX"
 
     def test_get_instr_code_from_file_name_split(self):
         instr_code = _instr_code_from_file_name("Day_EURIBOR-ICE_20240900")

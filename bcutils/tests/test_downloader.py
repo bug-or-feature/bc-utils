@@ -10,6 +10,7 @@ from bcutils.bc_utils import (
     _build_save_path,
     _get_contract_month_year,
     _get_start_end_dates,
+    _get_exchange_for_code,
 )
 
 
@@ -45,8 +46,7 @@ class TestDownloader:
             )
 
     def test_hourly(self, bc_config, download_dir):
-        print(bc_config.keys())
-        if len(bc_config) == 0:
+        if not self._have_creds(bc_config):
             pytest.skip("Skipping test, no Barchart credentials found in env")
         else:
             get_barchart_downloads(
@@ -94,14 +94,23 @@ class TestDownloader:
             start_date, end_date = _get_start_end_dates(month, year)
 
             result = save_prices_for_contract(
-                create_bc_session(config_obj=bc_config),
-                contract_key,
-                save_path,
-                start_date,
-                end_date,
+                session=create_bc_session(config_obj=bc_config),
+                contract=contract_key,
+                save_path=save_path,
+                start_date=start_date,
+                end_date=end_date,
             )
 
             assert result == HistoricalDataResult.INSUFFICIENT
+
+    def test_get_exchange(self, bc_config):
+        if not self._have_creds(bc_config):
+            pytest.skip("Skipping test, no Barchart credentials found in env")
+        else:
+            exch = _get_exchange_for_code(
+                create_bc_session(config_obj=bc_config), "GCF24"
+            )
+            assert exch == "COMEX"
 
     @staticmethod
     def _have_creds(config: dict):
