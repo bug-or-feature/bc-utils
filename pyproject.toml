@@ -23,13 +23,11 @@ classifiers = [
     "License :: OSI Approved :: BSD License",
 ]
 dependencies = [
-    "requests>=2,<3",
     "numpy<2",
     "pandas<3",
     "beautifulsoup4>=4,<5",
     "pyyaml>=6.0.1,<7",
     "playwright>=1.62.0",
-    "python-dotenv>=1.2.3",
     "humanization-playwright>=0.1.2",
 ]
 
@@ -41,7 +39,7 @@ Issues = "https://github.com/bug-or-feature/bc-utils/issues"
 [dependency-groups]
 dev = [
     "mypy>=2.3.1",
-    "pytest>=7,<8",
+    "pytest>=9,<10",
     "ruff>=0.8,<0.9",
 ]
 
