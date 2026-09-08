@@ -38,3 +38,7 @@ inc/
 /.env
 /.venv
 /data
+auth.json
+/downloads
+humanization.log
+/.claude
