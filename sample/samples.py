@@ -11,11 +11,9 @@ from bcutils.bc_utils import (
     _build_save_path,
     _get_contract_month_year,
     _get_start_end_dates,
-    _build_inverse_map,
     _env,
 )
 from bcutils.migrate import migrate_to_multi_freq
-from bcutils.config import CONTRACT_MAP
 
 logging.basicConfig(level=logging.INFO)
 
@@ -106,8 +104,9 @@ def update_downloads():
     update_barchart_downloads(
         instr_code="AUD",
         contract_map={"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}},
-        save_dir=os.getcwd(),
+        save_dir="/Users/ageach/Dev/work/bc-utils/dl_test",
         dry_run=False,
+        days_ago=100000,
     )
 
 
@@ -115,23 +114,23 @@ def update_hourly_file():
     # update the hourly AUD Mar 2024 price file in the current working directory
     contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
     update_barchart_contract_file(
-        create_bc_session(config_obj=_env()),
-        _build_inverse_map(contract_map),
-        os.getcwd(),
-        "A6H24",
-        Resolution.Hour,
+        session=create_bc_session(config_obj=_env()),
+        contract_map=contract_map,
+        path=os.getcwd(),
+        contract_id="A6H24",
+        res=Resolution.Hour,
     )
 
 
-def update_daily_file(contract_key, config=None):
-    if config is None:
-        config = CONTRACT_MAP
+def update_daily_file():
+    # update the daily AUD Mar 2024 price file in the current working directory
+    contract_map = {"AUD": {"code": "A6", "cycle": "HMUZ", "exchange": "CME"}}
     update_barchart_contract_file(
-        create_bc_session(config_obj=_env()),
-        config,
-        os.getcwd(),
-        contract_key,
-        Resolution.Day,
+        session=create_bc_session(config_obj=_env()),
+        contract_map=contract_map,
+        path=os.getcwd(),
+        contract_id="A6H24",
+        res=Resolution.Day,
     )
 
 
@@ -149,10 +148,11 @@ def rename_files_with_new_format():
 if __name__ == "__main__":
     download_hourly()
     # download_hourly_and_daily()
+    # download_specific_contracts()
     # save_hourly("AUD", "A6H20")
     # save_daily("AUD", "A6H20")
     # save_hourly("CHFJPY", "UPU14")
     # update_downloads()
     # update_hourly_file()
-    # update_daily_file("EPM24")
+    # update_daily_file()
     # rename_files_with_new_format()
