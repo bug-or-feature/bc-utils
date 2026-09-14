@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.1.8 (2026-09-14)
+* re-implemented with a real browser (#39)
+* minimum Python 3.11
+* switch from poetry to uv
+* use ruff instead of black, flake8
+* new instruments and config fixes
+
 ## 0.1.7 (2024-12-28)
 * updated date format in hourly prices (#27)
 * file updates include Volume instead of Open Interest (#25)

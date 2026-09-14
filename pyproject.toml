@@ -1,6 +1,6 @@
 [project]
 name = "bc-utils"
-version = "0.1.7"
+version = "0.1.8"
 description = "Python utility automation scripts for Barchart.com"
 authors = [
     { name = "Andy Geach", email = "andy@bugorfeature.net" }
